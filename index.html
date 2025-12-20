@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cousin Ages</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="container">
+      <h1>Cousin Ages</h1>
+      <p class="subtitle">Ages update automatically based on today’s date when you open this page.</p>
+
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search by name…" autocomplete="off" />
+        <label class="toggle">
+          <input id="showDeceased" type="checkbox" checked />
+          <span>Show deceased</span>
+        </label>
+        <button id="sortBtn" type="button" aria-label="Sort">
+          Sort: Oldest → Youngest
+        </button>
+      </div>
+
+      <details class="uploader">
+        <summary>Optional: Replace data by uploading an updated Excel file</summary>
+        <p class="small">
+          If you update the Excel file later, you can load it here on your phone to refresh the list (nothing is uploaded anywhere).
+        </p>
+        <input id="fileInput" type="file" accept=".xlsx,.xls" />
+        <p class="small note">Note: This uses a public CDN for the Excel parser library.</p>
+      </details>
+
+      <div class="meta">
+        <span id="asOf"></span>
+        <span id="count"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="cards" class="cards"></div>
+    <p id="empty" class="empty" hidden>No matches.</p>
+  </main>
+
+  <footer class="container footer">
+    <p class="small">
+      Tip: Add this page to your home screen for an “app-like” experience.
+    </p>
+  </footer>
+
+  <script>
+    // Embedded default dataset (from your Excel file)
+    window.COUSIN_DATA = [
+  {
+    "name": "Mary Ann Hicks Lickliter",
+    "birthdate": "1946-04-22",
+    "passed": null
+  },
+  {
+    "name": "Barbara Jo Hicks",
+    "birthdate": "1947-09-18",
+    "passed": "2003-09-07"
+  },
+  {
+    "name": "Kathy Jean Hicks",
+    "birthdate": "1949-08-22",
+    "passed": null
+  },
+  {
+    "name": "Wanda LaRue Hicks Stanford",
+    "birthdate": null,
+    "passed": null
+  },
+  {
+    "name": "Sonia Hicks",
+    "birthdate": "1957-01-24",
+    "passed": "2025-12-09"
+  },
+  {
+    "name": "Charlotte Patrick Curtis",
+    "birthdate": "1957-03-07",
+    "passed": null
+  },
+  {
+    "name": "Sharon Rose Patrick Franks",
+    "birthdate": "1958-03-17",
+    "passed": null
+  },
+  {
+    "name": "Clifford Steve Kirk",
+    "birthdate": "1959-04-09",
+    "passed": "2017-09-23"
+  },
+  {
+    "name": "Barry Autry",
+    "birthdate": "1960-02-14",
+    "passed": null
+  },
+  {
+    "name": "Stan Hicks",
+    "birthdate": "1961-01-23",
+    "passed": null
+  },
+  {
+    "name": "Bubba Autry",
+    "birthdate": "1961-05-22",
+    "passed": null
+  },
+  {
+    "name": "Ken Patrick",
+    "birthdate": "1961-12-18",
+    "passed": null
+  },
+  {
+    "name": "Tim Taylor",
+    "birthdate": "1964-05-19",
+    "passed": null
+  }
+];
+  </script>
+
+  <!-- Optional Excel upload support (SheetJS) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha256-2K7a9ldnLAvKx9aS+2zV7kwn+P1m3u+Jc9iZ2zqF3F0=" crossorigin="anonymous"></script>
+  <script src="app.js"></script>
+</body>
+</html>
