@@ -10,10 +10,23 @@
   };
 
   function parseISODate(s){
-    if(!s) return null;
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? null : d;
+  if(!s) return null;
+
+  // Force YYYY-MM-DD to be interpreted as a LOCAL date (not UTC)
+  if(typeof s === "string"){
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if(m){
+      const y = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      const d = Number(m[3]);
+      const dt = new Date(y, mo, d);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
   }
+
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
 
   // Calendar-accurate Y/M/D difference.
   function diffYMD(from, to){
@@ -185,29 +198,47 @@
       });
     }
   }
-
+function toISODateLocal(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
   // Handles ISO strings, JS Dates, or Excel serial numbers
   function excelDateToISO(v){
     if(v == null || v === "") return null;
 
     // Already a Date
     if(Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())){
-      return v.toISOString().slice(0,10);
+      return toISODateLocal(v);
     }
 
     // ISO-ish string
-    if(typeof v === "string"){
-      const d = new Date(v);
-      if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
-      return null;
-    }
+    // ISO-ish string
+if(typeof v === "string"){
+  // If it's YYYY-MM-DD, force LOCAL date parsing (prevents timezone day-shift)
+  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m){
+    const y = Number(m[1]);
+    const mo = Number(m[2]) - 1;
+    const day = Number(m[3]);
+    const d = new Date(y, mo, day);
+    if(!isNaN(d.getTime())) return toISODateLocal(d);
+    return null;
+  }
 
+  // Otherwise, fall back to Date parsing
+  const d = new Date(v);
+  if(!isNaN(d.getTime())) return toISODateLocal(d);
+  return null;
+}
+    
     // Excel serial number (days since 1899-12-30)
     if(typeof v === "number" && isFinite(v)){
       const epoch = new Date(Date.UTC(1899, 11, 30));
       const ms = v * 24 * 60 * 60 * 1000;
       const d = new Date(epoch.getTime() + ms);
-      return d.toISOString().slice(0,10);
+      return toISODateLocal(d);
     }
 
     return null;
