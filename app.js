@@ -80,7 +80,26 @@
   }
 
   function normalize(s){ return (s||"").toLowerCase().trim(); }
+function compareByBirthDateOnly(a, b){
+  // Expect birthdate fields like a.birthdate or a.birth (string "YYYY-MM-DD")
+  // If your data uses a different field name, adjust ONLY the two lines below.
+  const aDob = a.birthdate ?? a.birth ?? null;
+  const bDob = b.birthdate ?? b.birth ?? null;
 
+  // Put missing DOBs at the bottom
+  if(!aDob && !bDob) return 0;
+  if(!aDob) return 1;
+  if(!bDob) return -1;
+
+  // String compare works for YYYY-MM-DD format
+  if(aDob < bDob) return -1;   // earlier date first (older cousin first)
+  if(aDob > bDob) return 1;
+
+  // Tie-breaker for identical DOBs (stable, predictable)
+  const aName = (a.name ?? "").toLowerCase();
+  const bName = (b.name ?? "").toLowerCase();
+  return aName.localeCompare(bName);
+}
   function filterSort(rows){
     let out = rows;
 
@@ -93,13 +112,24 @@
       out = out.filter(r => normalize(r.name).includes(q));
     }
 
-    out = out.slice().sort((a,b)=>{
-      // Older = larger sortKeyDays
-      return state.sortOldestFirst ? (b.sortKeyDays - a.sortKeyDays) : (a.sortKeyDays - b.sortKeyDays);
-    });
+    out = out.slice().sort((a, b) => {
+  // Sort strictly by date of birth (YYYY-MM-DD), regardless of living/deceased
+  const aDob = a.birthdate ?? a.birth ?? null;
+  const bDob = b.birthdate ?? b.birth ?? null;
 
-    return out;
-  }
+  // Missing DOBs go last
+  if (!aDob && !bDob) return 0;
+  if (!aDob) return 1;
+  if (!bDob) return -1;
+
+  if (aDob < bDob) return state.sortOldestFirst ? -1 : 1;
+  if (aDob > bDob) return state.sortOldestFirst ? 1 : -1;
+
+  // Tie-breaker: name (stable order)
+  return (a.name ?? "").localeCompare(b.name ?? "");
+});
+
+return out;
 
   function fmtDate(d){
     if(!d) return "—";
