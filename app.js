@@ -1,4 +1,3 @@
-
 (function(){
   const $ = (id) => document.getElementById(id);
 
@@ -9,24 +8,39 @@
     q: ""
   };
 
+  function normalize(s){ return (s || "").toLowerCase().trim(); }
+
+  // Parse dates safely as LOCAL dates (prevents 1-day shift from UTC parsing)
   function parseISODate(s){
-  if(!s) return null;
+    if(!s) return null;
 
-  // Force YYYY-MM-DD to be interpreted as a LOCAL date (not UTC)
-  if(typeof s === "string"){
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if(m){
-      const y = Number(m[1]);
-      const mo = Number(m[2]) - 1;
-      const d = Number(m[3]);
-      const dt = new Date(y, mo, d);
-      return isNaN(dt.getTime()) ? null : dt;
+    // If it's already a Date object
+    if(Object.prototype.toString.call(s) === "[object Date]" && !isNaN(s.getTime())){
+      return new Date(s.getFullYear(), s.getMonth(), s.getDate());
     }
-  }
 
-  const d = new Date(s);
-  return isNaN(d.getTime()) ? null : d;
-}
+    // YYYY-MM-DD string -> local date
+    if(typeof s === "string"){
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(m){
+        const y = Number(m[1]);
+        const mo = Number(m[2]) - 1;
+        const d = Number(m[3]);
+        const dt = new Date(y, mo, d);
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+
+      // Fallback parse for other string formats (best effort)
+      const d = new Date(s);
+      if(!isNaN(d.getTime())){
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      }
+      return null;
+    }
+
+    // Numbers (Excel serials etc.) should be handled by excelDateToISO before reaching here
+    return null;
+  }
 
   // Calendar-accurate Y/M/D difference.
   function diffYMD(from, to){
@@ -48,17 +62,15 @@
 
   function fmtYMD(o){
     if(!o) return "—";
-    const parts = [
+    return [
       `${o.y} year${o.y===1?"":"s"}`,
       `${o.m} month${o.m===1?"":"s"}`,
       `${o.d} day${o.d===1?"":"s"}`
-    ];
-    return parts.join(", ");
+    ].join(", ");
   }
 
   function todayLocal(){
     const now = new Date();
-    // Use local date without time
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
@@ -68,71 +80,56 @@
     const ref = passed ?? todayLocal();
 
     const ageObj = birth ? diffYMD(birth, ref) : null;
+
     return {
       ...r,
       _birth: birth,
       _passed: passed,
       _ageObj: ageObj,
       ageText: birth ? fmtYMD(ageObj) : "—",
-      status: passed ? "deceased" : "alive",
-      sortKeyDays: birth ? (ref.getTime() - birth.getTime()) : -1
+      status: passed ? "deceased" : "alive"
     };
   }
 
-  function normalize(s){ return (s||"").toLowerCase().trim(); }
-function compareByBirthDateOnly(a, b){
-  // Expect birthdate fields like a.birthdate or a.birth (string "YYYY-MM-DD")
-  // If your data uses a different field name, adjust ONLY the two lines below.
-  const aDob = a.birthdate ?? a.birth ?? null;
-  const bDob = b.birthdate ?? b.birth ?? null;
-
-  // Put missing DOBs at the bottom
-  if(!aDob && !bDob) return 0;
-  if(!aDob) return 1;
-  if(!bDob) return -1;
-
-  // String compare works for YYYY-MM-DD format
-  if(aDob < bDob) return -1;   // earlier date first (older cousin first)
-  if(aDob > bDob) return 1;
-
-  // Tie-breaker for identical DOBs (stable, predictable)
-  const aName = (a.name ?? "").toLowerCase();
-  const bName = (b.name ?? "").toLowerCase();
-  return aName.localeCompare(bName);
-}
   function filterSort(rows){
-  let out = Array.isArray(rows) ? rows : [];
+    let out = Array.isArray(rows) ? rows : [];
 
-  // Filter (optional): hide deceased
-  if(!state.showDeceased){
-    out = out.filter(r => (r?.status ?? "") !== "deceased");
+    // Filter deceased toggle
+    if(!state.showDeceased){
+      out = out.filter(r => r.status !== "deceased");
+    }
+
+    // Apply search (name contains query)
+    const q = normalize(state.q);
+    if(q){
+      out = out.filter(r => normalize(r.name).includes(q));
+    }
+
+    // Sort strictly by DOB (birth order), not by age/age-at-death
+    out = out.slice().sort((a, b) => {
+      const aT = a._birth ? a._birth.getTime() : Number.POSITIVE_INFINITY;
+      const bT = b._birth ? b._birth.getTime() : Number.POSITIVE_INFINITY;
+
+      if(aT !== bT){
+        return state.sortOldestFirst ? (aT - bT) : (bT - aT);
+      }
+
+      // Tie-breaker: name
+      return (a.name ?? "").localeCompare(b.name ?? "");
+    });
+
+    return out;
   }
-
-  // Sort: birth order only (oldest DOB first if sortOldestFirst === true)
-  out = out.slice().sort((a, b) => {
-    // Try several possible DOB field names safely
-    const aDob = a?.birthdate ?? a?.birth ?? a?.dob ?? a?.dateOfBirth ?? null;
-    const bDob = b?.birthdate ?? b?.birth ?? b?.dob ?? b?.dateOfBirth ?? null;
-
-    // Missing DOBs go last
-    if(!aDob && !bDob) return 0;
-    if(!aDob) return 1;
-    if(!bDob) return -1;
-
-    // Works for "YYYY-MM-DD"
-    if(aDob < bDob) return state.sortOldestFirst ? -1 : 1;
-    if(aDob > bDob) return state.sortOldestFirst ? 1 : -1;
-
-    // Tie-breaker: name
-    return (a?.name ?? "").localeCompare(b?.name ?? "");
-  });
-
-  return out;
-}
 
   function fmtDate(d){
     if(!d) return "—";
     return d.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" });
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[s]));
   }
 
   function render(){
@@ -140,6 +137,12 @@ function compareByBirthDateOnly(a, b){
     const empty = $("empty");
     const asOf = $("asOf");
     const count = $("count");
+
+    // If the page IDs don't exist, fail gracefully (prevents blank page)
+    if(!cards || !empty || !asOf || !count){
+      console.error("Missing required DOM elements (cards, empty, asOf, count).");
+      return;
+    }
 
     const computed = state.data.map(computeRow);
     const filtered = filterSort(computed);
@@ -155,12 +158,11 @@ function compareByBirthDateOnly(a, b){
     empty.hidden = true;
 
     for(const r of filtered){
+      const badgeClass = r.status === "deceased" ? "badge deceased" : "badge alive";
+      const badgeText  = r.status === "deceased" ? "Deceased" : "Living";
+
       const card = document.createElement("section");
       card.className = "card";
-
-      const badgeClass = r.status === "deceased" ? "badge deceased" : "badge alive";
-      const badgeText = r.status === "deceased" ? "Deceased" : "Living";
-
       card.innerHTML = `
         <h2 class="name">${escapeHtml(r.name || "Unnamed")}</h2>
         <div class="row"><span>Birthdate</span><span class="value">${fmtDate(r._birth)}</span></div>
@@ -172,20 +174,71 @@ function compareByBirthDateOnly(a, b){
     }
   }
 
-  function escapeHtml(str){
-    return String(str).replace(/[&<>"']/g, s => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[s]));
+  function toISODateLocal(d){
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  // Handles ISO strings, JS Dates, or Excel serial numbers (no timezone shift)
+  function excelDateToISO(v){
+    if(v == null || v === "") return null;
+
+    // Already a Date
+    if(Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())){
+      return toISODateLocal(v);
+    }
+
+    // YYYY-MM-DD (force local)
+    if(typeof v === "string"){
+      const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if(m){
+        const y = Number(m[1]);
+        const mo = Number(m[2]) - 1;
+        const day = Number(m[3]);
+        const d = new Date(y, mo, day);
+        return isNaN(d.getTime()) ? null : toISODateLocal(d);
+      }
+
+      // Fallback parse
+      const d = new Date(v);
+      if(!isNaN(d.getTime())){
+        return toISODateLocal(d);
+      }
+      return null;
+    }
+
+    // Excel serial number (days since 1899-12-30)
+    // Use LOCAL base date to prevent off-by-one issues.
+    if(typeof v === "number" && isFinite(v)){
+      const wholeDays = Math.floor(v); // ignore fractional time
+      const base = new Date(1899, 11, 30); // local
+      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + wholeDays);
+      return isNaN(d.getTime()) ? null : toISODateLocal(d);
+    }
+
+    return null;
   }
 
   function hookUI(){
-    $("search").addEventListener("input", (e)=>{ state.q = e.target.value; render(); });
-    $("showDeceased").addEventListener("change", (e)=>{ state.showDeceased = e.target.checked; render(); });
-    $("sortBtn").addEventListener("click", ()=>{
-      state.sortOldestFirst = !state.sortOldestFirst;
-      $("sortBtn").textContent = state.sortOldestFirst ? "Sort: Oldest → Youngest" : "Sort: Youngest → Oldest";
-      render();
-    });
+    const searchEl = $("search");
+    const showDeceasedEl = $("showDeceased");
+    const sortBtn = $("sortBtn");
+
+    if(searchEl){
+      searchEl.addEventListener("input", (e)=>{ state.q = e.target.value; render(); });
+    }
+    if(showDeceasedEl){
+      showDeceasedEl.addEventListener("change", (e)=>{ state.showDeceased = e.target.checked; render(); });
+    }
+    if(sortBtn){
+      sortBtn.addEventListener("click", ()=>{
+        state.sortOldestFirst = !state.sortOldestFirst;
+        sortBtn.textContent = state.sortOldestFirst ? "Sort: Oldest → Youngest" : "Sort: Youngest → Oldest";
+        render();
+      });
+    }
 
     const fileInput = $("fileInput");
     if(fileInput){
@@ -194,13 +247,18 @@ function compareByBirthDateOnly(a, b){
         if(!file) return;
 
         try{
+          if(typeof XLSX === "undefined"){
+            alert("Excel import library (XLSX) is not loaded on this page.");
+            return;
+          }
+
           const buf = await file.arrayBuffer();
           const wb = XLSX.read(buf, { type: "array" });
           const firstSheetName = wb.SheetNames[0];
           const ws = wb.Sheets[firstSheetName];
           const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
 
-          // Expect columns: NAME, BIRTHDATE, Passed (case-insensitive)
+          // Expect columns: NAME, BIRTHDATE, PASSED (case-insensitive)
           const mapped = rows.map(r=>{
             const keys = Object.keys(r);
             const get = (k)=> r[keys.find(x=> String(x).toLowerCase().trim() === k)] ?? null;
@@ -219,58 +277,13 @@ function compareByBirthDateOnly(a, b){
           state.data = mapped;
           render();
         } catch(err){
-          alert("Could not read that Excel file. Please confirm it has columns like NAME, BIRTHDATE, Passed.");
+          alert("Could not read that Excel file. Please confirm it has columns like NAME, BIRTHDATE, PASSED.");
           console.error(err);
         } finally {
           e.target.value = "";
         }
       });
     }
-  }
-function toISODateLocal(d){
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-  // Handles ISO strings, JS Dates, or Excel serial numbers
-  function excelDateToISO(v){
-    if(v == null || v === "") return null;
-
-    // Already a Date
-    if(Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())){
-      return toISODateLocal(v);
-    }
-
-    // ISO-ish string
-    // ISO-ish string
-if(typeof v === "string"){
-  // If it's YYYY-MM-DD, force LOCAL date parsing (prevents timezone day-shift)
-  const m = v.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if(m){
-    const y = Number(m[1]);
-    const mo = Number(m[2]) - 1;
-    const day = Number(m[3]);
-    const d = new Date(y, mo, day);
-    if(!isNaN(d.getTime())) return toISODateLocal(d);
-    return null;
-  }
-
-  // Otherwise, fall back to Date parsing
-  const d = new Date(v);
-  if(!isNaN(d.getTime())) return toISODateLocal(d);
-  return null;
-}
-    
-    // Excel serial number (days since 1899-12-30)
-    if(typeof v === "number" && isFinite(v)){
-      const epoch = new Date(Date.UTC(1899, 11, 30));
-      const ms = v * 24 * 60 * 60 * 1000;
-      const d = new Date(epoch.getTime() + ms);
-      return toISODateLocal(d);
-    }
-
-    return null;
   }
 
   hookUI();
