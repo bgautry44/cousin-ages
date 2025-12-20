@@ -101,35 +101,34 @@ function compareByBirthDateOnly(a, b){
   return aName.localeCompare(bName);
 }
   function filterSort(rows){
-    let out = rows;
+  let out = Array.isArray(rows) ? rows : [];
 
-    if(!state.showDeceased){
-      out = out.filter(r => r.status !== "deceased");
-    }
+  // Filter (optional): hide deceased
+  if(!state.showDeceased){
+    out = out.filter(r => (r?.status ?? "") !== "deceased");
+  }
 
-    if(state.q){
-      const q = normalize(state.q);
-      out = out.filter(r => normalize(r.name).includes(q));
-    }
+  // Sort: birth order only (oldest DOB first if sortOldestFirst === true)
+  out = out.slice().sort((a, b) => {
+    // Try several possible DOB field names safely
+    const aDob = a?.birthdate ?? a?.birth ?? a?.dob ?? a?.dateOfBirth ?? null;
+    const bDob = b?.birthdate ?? b?.birth ?? b?.dob ?? b?.dateOfBirth ?? null;
 
-    out = out.slice().sort((a, b) => {
-  // Sort strictly by date of birth (YYYY-MM-DD), regardless of living/deceased
-  const aDob = a.birthdate ?? a.birth ?? null;
-  const bDob = b.birthdate ?? b.birth ?? null;
+    // Missing DOBs go last
+    if(!aDob && !bDob) return 0;
+    if(!aDob) return 1;
+    if(!bDob) return -1;
 
-  // Missing DOBs go last
-  if (!aDob && !bDob) return 0;
-  if (!aDob) return 1;
-  if (!bDob) return -1;
+    // Works for "YYYY-MM-DD"
+    if(aDob < bDob) return state.sortOldestFirst ? -1 : 1;
+    if(aDob > bDob) return state.sortOldestFirst ? 1 : -1;
 
-  if (aDob < bDob) return state.sortOldestFirst ? -1 : 1;
-  if (aDob > bDob) return state.sortOldestFirst ? 1 : -1;
+    // Tie-breaker: name
+    return (a?.name ?? "").localeCompare(b?.name ?? "");
+  });
 
-  // Tie-breaker: name (stable order)
-  return (a.name ?? "").localeCompare(b.name ?? "");
-});
-
-return out;
+  return out;
+}
 
   function fmtDate(d){
     if(!d) return "—";
