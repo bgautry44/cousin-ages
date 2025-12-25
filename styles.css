@@ -154,3 +154,42 @@ h1{
   border-top:1px solid var(--border);
   padding:16px 0 24px;
 }
+/* --- Photo / avatar support --- */
+.cardTop{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin:0 0 10px;
+}
+
+.avatar{
+  width:56px;
+  height:56px;
+  border-radius:999px;
+  object-fit:cover;
+  flex:0 0 auto;
+  border:1px solid rgba(255,255,255,0.14);
+  background:#0e1422;
+}
+
+.avatar.placeholder{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#7f93ad;
+  font-size:12px;
+}
+
+.cardTopText{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.cardTop .name{
+  margin:0 0 6px;
+}
+
+/* Keep badge aligned nicely in the header row */
+.cardTopText .badge{
+  margin-top:0;
+}
