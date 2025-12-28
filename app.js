@@ -4,15 +4,13 @@
   const state = {
     data: Array.isArray(window.COUSIN_DATA) ? window.COUSIN_DATA : [],
     showDeceased: true,
-    sortOldestFirst: true, // true = oldest DOB first
+    sortOldestFirst: true,
     q: ""
   };
 
-  function normalize(s) {
-    return (s || "").toString().toLowerCase().trim();
-  }
+  // --- helpers ---
+  function normalize(s) { return (s || "").toString().toLowerCase().trim(); }
 
-  // Always return a LOCAL date (midnight local) to avoid UTC day-shift
   function localDateFromYMD(y, m, d) {
     const dt = new Date(Number(y), Number(m) - 1, Number(d));
     return isNaN(dt.getTime()) ? null : dt;
@@ -21,22 +19,17 @@
   function parseISODate(v) {
     if (v == null || v === "") return null;
 
-    // Already a Date
     if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
       return new Date(v.getFullYear(), v.getMonth(), v.getDate());
     }
 
-    // "YYYY-MM-DD" -> local
     if (typeof v === "string") {
       const s = v.trim();
       const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
       if (m) return localDateFromYMD(m[1], m[2], m[3]);
 
-      // Fallback parse: normalize to local Y/M/D
       const d = new Date(s);
-      if (!isNaN(d.getTime())) {
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      }
+      if (!isNaN(d.getTime())) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
       return null;
     }
 
@@ -48,7 +41,6 @@
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
-  // Calendar-accurate Y/M/D difference
   function diffYMD(from, to) {
     let y = to.getFullYear() - from.getFullYear();
     let m = to.getMonth() - from.getMonth();
@@ -82,71 +74,102 @@
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (s) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[s]));
   }
 
-  function photoUrl(r) {
-    const p = r?.photo;
-    if (!p) return null;
-    const s = String(p).trim();
-    if (!s) return null;
-    // allow either "photos/..." or full https URL
-    if (/^https?:\/\//i.test(s)) return s;
-    return s;
+  // Normalize photos:
+  // - prefer r.photos (array)
+  // - else fall back to r.photo (single)
+  function photoList(r) {
+    const arr = Array.isArray(r?.photos) ? r.photos : null;
+    if (arr && arr.length) return arr.map(x => String(x).trim()).filter(Boolean);
+    const single = r?.photo ? String(r.photo).trim() : "";
+    return single ? [single] : [];
   }
 
   function computeRow(r) {
     const birth = parseISODate(r.birthdate);
     const passed = parseISODate(r.passed);
 
-    // If passed is in the future (data entry error), treat as not passed yet
-    const passedEffective = (passed && passed.getTime() <= todayLocal().getTime()) ? passed : null;
+    const today = todayLocal();
+    const passedEffective = (passed && passed.getTime() <= today.getTime()) ? passed : null;
 
-    const ref = passedEffective ?? todayLocal();
+    const ref = passedEffective ?? today;
     const ageObj = birth ? diffYMD(birth, ref) : null;
 
     return {
       ...r,
       name: (r?.name ?? "").toString(),
-      photo: r?.photo ?? null,
+      tribute: (r?.tribute ?? "").toString(),
       _birth: birth,
       _passed: passedEffective,
       ageText: birth ? fmtYMD(ageObj) : "—",
-      status: passedEffective ? "deceased" : "alive"
+      status: passedEffective ? "deceased" : "alive",
+      _photos: photoList(r)
     };
   }
 
   function filterSort(rows) {
     let out = Array.isArray(rows) ? rows : [];
 
-    if (!state.showDeceased) {
-      out = out.filter((r) => r.status !== "deceased");
-    }
+    if (!state.showDeceased) out = out.filter(r => r.status !== "deceased");
 
     const q = normalize(state.q);
-    if (q) {
-      out = out.filter((r) => normalize(r.name).includes(q));
-    }
+    if (q) out = out.filter(r => normalize(r.name).includes(q));
 
-    // Sort strictly by DOB (birth order). Missing DOB goes last.
     out = out.slice().sort((a, b) => {
       const aT = a._birth ? a._birth.getTime() : Number.POSITIVE_INFINITY;
       const bT = b._birth ? b._birth.getTime() : Number.POSITIVE_INFINITY;
-
-      if (aT !== bT) {
-        return state.sortOldestFirst ? (aT - bT) : (bT - aT);
-      }
-
-      // Tie-breaker: name
+      if (aT !== bT) return state.sortOldestFirst ? (aT - bT) : (bT - aT);
       return (a.name ?? "").localeCompare(b.name ?? "");
     });
 
     return out;
+  }
+
+  // --- carousel engine ---
+  // We keep timers so re-renders do not leak intervals
+  const carouselTimers = new Map();
+
+  function stopCarouselFor(imgEl) {
+    const t = carouselTimers.get(imgEl);
+    if (t) clearInterval(t);
+    carouselTimers.delete(imgEl);
+  }
+
+  function startCarousel(imgEl, photos) {
+    stopCarouselFor(imgEl);
+
+    if (!imgEl || !Array.isArray(photos) || photos.length === 0) return;
+
+    let idx = 0;
+    imgEl.src = photos[0];
+
+    // If only one photo, no need to rotate
+    if (photos.length === 1) return;
+
+    const tickMs = 2600; // smooth but not frantic on phones
+
+    const timer = setInterval(() => {
+      idx = (idx + 1) % photos.length;
+      imgEl.classList.remove("fadeIn");
+      // force reflow to restart animation
+      void imgEl.offsetWidth;
+      imgEl.src = photos[idx];
+      imgEl.classList.add("fadeIn");
+    }, tickMs);
+
+    carouselTimers.set(imgEl, timer);
+
+    // Tap to advance immediately (nice on mobile)
+    imgEl.addEventListener("click", () => {
+      idx = (idx + 1) % photos.length;
+      imgEl.classList.remove("fadeIn");
+      void imgEl.offsetWidth;
+      imgEl.src = photos[idx];
+      imgEl.classList.add("fadeIn");
+    }, { once: false });
   }
 
   function render() {
@@ -160,14 +183,14 @@
       return;
     }
 
+    // stop all existing carousels before rebuild
+    for (const [imgEl] of carouselTimers) stopCarouselFor(imgEl);
+
     const computed = state.data.map(computeRow);
     const filtered = filterSort(computed);
 
     asOf.textContent = `As of: ${todayLocal().toLocaleDateString(undefined, {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric"
+      weekday: "short", year: "numeric", month: "short", day: "numeric"
     })}`;
     count.textContent = `Shown: ${filtered.length} / ${computed.length}`;
 
@@ -179,30 +202,66 @@
     empty.hidden = true;
 
     for (const r of filtered) {
-      const badgeClass = r.status === "deceased" ? "badge deceased" : "badge alive";
-      const badgeText = r.status === "deceased" ? "Deceased" : "Living";
+      const isMemorial = r.status === "deceased";
+      const badgeClass = isMemorial ? "badge deceased" : "badge alive";
+      const badgeText = isMemorial ? "In Memoriam" : "Living";
 
-      const img = photoUrl(r);
-      const photoHtml = img
-        ? `<img class="avatar" src="${escapeHtml(img)}" alt="${escapeHtml(r.name || "Photo")}" loading="lazy" />`
-        : `<div class="avatar placeholder" aria-hidden="true">No photo</div>`;
+      const years = (r._birth || r._passed)
+        ? `${r._birth ? r._birth.getFullYear() : "—"} – ${r._passed ? r._passed.getFullYear() : "—"}`
+        : "";
+
+      const photos = r._photos;
 
       const card = document.createElement("section");
-      card.className = "card";
+      card.className = "card" + (isMemorial ? " memorial" : "");
+
+      // Avatar area: image if we have at least one photo, else placeholder
+      const avatarHtml = photos.length
+        ? `
+          <div class="avatarWrap">
+            <img class="avatar" alt="${escapeHtml(r.name || "Photo")}" loading="lazy" />
+            ${photos.length > 1 ? `<div class="avatarDot" title="Multiple photos">↻</div>` : (isMemorial ? `<div class="avatarDot" title="In Memoriam">✦</div>` : ``)}
+          </div>
+        `
+        : `
+          <div class="avatarWrap">
+            <div class="avatar placeholder" aria-hidden="true">No photo</div>
+            ${isMemorial ? `<div class="avatarDot" title="In Memoriam">✦</div>` : ``}
+          </div>
+        `;
+
+      const memorialLine = isMemorial
+        ? `
+          <div class="memorialMark">In loving memory</div>
+          ${years ? `<div class="memorialYears">${escapeHtml(years)}</div>` : ``}
+        `
+        : ``;
+
+      const tributeBlock = (isMemorial && r.tribute && r.tribute.trim())
+        ? `<div class="tribute">“${escapeHtml(r.tribute.trim())}”</div>`
+        : "";
+
       card.innerHTML = `
         <div class="cardTop">
-          ${photoHtml}
+          ${avatarHtml}
           <div class="cardTopText">
             <h2 class="name">${escapeHtml(r.name || "Unnamed")}</h2>
             <div class="${badgeClass}">${badgeText}</div>
+            ${memorialLine}
           </div>
         </div>
 
         <div class="row"><span>Birthdate</span><span class="value">${fmtDate(r._birth)}</span></div>
-        <div class="row"><span>${r.status === "deceased" ? "Age at death" : "Current age"}</span><span class="value">${escapeHtml(r.ageText)}</span></div>
+        <div class="row"><span>${isMemorial ? "Age at passing" : "Current age"}</span><span class="value">${escapeHtml(r.ageText)}</span></div>
         <div class="row"><span>Passed</span><span class="value">${fmtDate(r._passed)}</span></div>
+        ${tributeBlock}
       `;
+
       cards.appendChild(card);
+
+      // Start carousel if there is an <img> avatar
+      const imgEl = card.querySelector("img.avatar");
+      if (imgEl && photos.length) startCarousel(imgEl, photos);
     }
   }
 
@@ -213,16 +272,13 @@
     return `${y}-${m}-${day}`;
   }
 
-  // Handles ISO strings, JS Dates, or Excel serial numbers (no timezone shift)
   function excelDateToISO(v) {
     if (v == null || v === "") return null;
 
-    // Already a Date
     if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
       return toISODateLocal(v);
     }
 
-    // YYYY-MM-DD (force local)
     if (typeof v === "string") {
       const s = v.trim();
       const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -231,7 +287,6 @@
         return d ? toISODateLocal(d) : null;
       }
 
-      // Fallback parse
       const d = new Date(s);
       if (!isNaN(d.getTime())) {
         return toISODateLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -239,11 +294,9 @@
       return null;
     }
 
-    // Excel serial number (days since 1899-12-30)
-    // Use LOCAL base date, ignore fractional day.
     if (typeof v === "number" && isFinite(v)) {
       const wholeDays = Math.floor(v);
-      const base = new Date(1899, 11, 30); // local
+      const base = new Date(1899, 11, 30);
       const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + wholeDays);
       return isNaN(d.getTime()) ? null : toISODateLocal(d);
     }
@@ -257,19 +310,11 @@
     const sortBtn = $("sortBtn");
 
     if (searchEl) {
-      searchEl.addEventListener("input", (e) => {
-        state.q = e.target.value;
-        render();
-      });
+      searchEl.addEventListener("input", (e) => { state.q = e.target.value; render(); });
     }
-
     if (showDeceasedEl) {
-      showDeceasedEl.addEventListener("change", (e) => {
-        state.showDeceased = e.target.checked;
-        render();
-      });
+      showDeceasedEl.addEventListener("change", (e) => { state.showDeceased = e.target.checked; render(); });
     }
-
     if (sortBtn) {
       sortBtn.addEventListener("click", () => {
         state.sortOldestFirst = !state.sortOldestFirst;
@@ -296,7 +341,7 @@
           const ws = wb.Sheets[firstSheetName];
           const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
 
-          // Expect columns: NAME, BIRTHDATE, PASSED, PHOTO (case-insensitive)
+          // Columns: NAME, BIRTHDATE, PASSED, PHOTO or PHOTOS, TRIBUTE (case-insensitive)
           const mapped = rows.map((r) => {
             const keys = Object.keys(r);
             const get = (k) => r[keys.find((x) => String(x).toLowerCase().trim() === k)] ?? null;
@@ -305,19 +350,29 @@
             const birth = get("birthdate");
             const passed = get("passed");
             const photo = get("photo");
+            const photos = get("photos");    // optional: comma-separated list
+            const tribute = get("tribute");  // optional
+
+            let photosArr = [];
+            if (photos) {
+              photosArr = String(photos).split(",").map(x => x.trim()).filter(Boolean);
+            } else if (photo) {
+              photosArr = [String(photo).trim()].filter(Boolean);
+            }
 
             return {
               name: name ? String(name).trim() : "",
               birthdate: excelDateToISO(birth),
               passed: excelDateToISO(passed),
-              photo: photo ? String(photo).trim() : null
+              photos: photosArr.length ? photosArr : undefined,
+              tribute: tribute ? String(tribute).trim() : ""
             };
-          }).filter((x) => x.name || x.birthdate || x.passed || x.photo);
+          }).filter((x) => x.name || x.birthdate || x.passed || (x.photos && x.photos.length) || x.tribute);
 
           state.data = mapped;
           render();
         } catch (err) {
-          alert("Could not read that Excel file. Please confirm it has columns like NAME, BIRTHDATE, PASSED (and optional PHOTO).");
+          alert("Could not read that Excel file. Please confirm it has columns like NAME, BIRTHDATE, PASSED (optional: PHOTO/PHOTOS, TRIBUTE).");
           console.error(err);
         } finally {
           e.target.value = "";
