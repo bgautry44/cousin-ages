@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cousin Ages</title>
+  <title>My Crazy Cousins</title>
+  <meta name="apple-mobile-web-app-title" content="My Crazy Cousins">
   <link rel="stylesheet" href="styles.css" />
 
   <!-- Home screen / tab icons -->
@@ -14,8 +15,8 @@
 <body>
   <header class="app-header">
     <div class="container">
-      <h1>Cousin Ages</h1>
-      <p class="subtitle">Ages update automatically based on today’s date when you open this page.</p>
+      <h1>My Crazy Cousins</h1>
+      <p class="subtitle">Lives remembered. Stories shared.</p>
 
       <div class="controls">
         <input id="search" type="search" placeholder="Search by name…" autocomplete="off" />
@@ -28,16 +29,7 @@
         </button>
       </div>
 
-      <details class="uploader">
-        <summary>Optional: Replace data by uploading an updated Excel file</summary>
-        <p class="small">
-          If you update the Excel file later, you can load it here on your phone to refresh the list (nothing is uploaded anywhere).
-        </p>
-        <input id="fileInput" type="file" accept=".xlsx,.xls" />
-        <p class="small note">Note: This uses a public CDN for the Excel parser library.</p>
-      </details>
-
-      <div class="meta">
+           <div class="meta">
         <span id="asOf"></span>
         <span id="count"></span>
       </div>
