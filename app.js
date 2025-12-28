@@ -241,14 +241,14 @@
 
     // Upcoming birthdays (next 30 days)
     if (birthdayLine) {
-      const soon = computed
-        .filter(r => r._birth && r.nextBirthday)
-        .map(r => ({ name: r.name, date: r.nextBirthday }))
-        .filter(x => {
-          const diffDays = Math.ceil((x.date - today) / 86400000);
-          return diffDays >= 0 && diffDays <= 30;
-        })
-        .sort((a, b) => a.date - b.date);
+    const soon = computed
+  .filter(r => r.status === "alive" && r._birth && r.nextBirthday)
+  .map(r => ({ name: r.name, date: r.nextBirthday }))
+  .filter(x => {
+    const diffDays = Math.ceil((x.date - today) / 86400000);
+    return diffDays >= 0 && diffDays <= 30;
+  })
+  .sort((a, b) => a.date - b.date);
 
       if (soon.length) {
         birthdayLine.innerHTML =
