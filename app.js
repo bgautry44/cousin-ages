@@ -123,7 +123,9 @@
     const ref = passedEffective ?? today;
     const ageObj = birth ? diffYMD(birth, ref) : null;
 
-    const isBirthdayToday = birth ? sameMonthDay(birth, today) : false;
+    const isBirthdayToday =
+  birth && !passedEffective ? sameMonthDay(birth, today) : false;
+
     const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
 
     return {
