@@ -125,6 +125,11 @@
 
     const isBirthdayToday =
   birth && !passedEffective ? sameMonthDay(birth, today) : false;
+    const wouldHaveTurned =
+  (birth && passedEffective && sameMonthDay(birth, today))
+    ? (today.getFullYear() - birth.getFullYear())
+    : null;
+
 
     const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
 
@@ -138,7 +143,8 @@
       status: passedEffective ? "deceased" : "alive",
       _photos: photoList(r),
       isBirthdayToday,
-      nextBirthday
+      nextBirthday,
+      wouldHaveTurned
     };
   }
 
@@ -323,6 +329,10 @@
       const tributeBlock = (isMemorial && r.tribute && r.tribute.trim())
         ? `<div class="tribute">“${escapeHtml(r.tribute.trim())}”</div>`
         : "";
+      const wouldHaveTurnedBlock =
+  (isMemorial && r.wouldHaveTurned != null)
+    ? `<div class="wouldHaveTurned">Would have turned <strong>${r.wouldHaveTurned}</strong> today.</div>`
+    : "";
 
       card.innerHTML = `
         <div class="cardTop">
@@ -338,6 +348,7 @@
         <div class="row"><span>${isMemorial ? "Age at passing" : "Current age"}</span><span class="value">${escapeHtml(r.ageText)}</span></div>
         <div class="row"><span>Passed</span><span class="value">${fmtDate(r._passed)}</span></div>
         ${tributeBlock}
+        ${wouldHaveTurnedBlock}
       `;
 
       cards.appendChild(card);
