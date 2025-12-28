@@ -114,39 +114,41 @@
   // Data computation
   // -----------------------
   function computeRow(r) {
-    const birth = parseISODate(r.birthdate);
-    const passed = parseISODate(r.passed);
+  const birth = parseISODate(r.birthdate);
+  const passed = parseISODate(r.passed);
 
-    const today = todayLocal();
-    const passedEffective = (passed && passed.getTime() <= today.getTime()) ? passed : null;
+  const today = todayLocal();
+  const passedEffective = (passed && passed.getTime() <= today.getTime()) ? passed : null;
 
-    const ref = passedEffective ?? today;
-    const ageObj = birth ? diffYMD(birth, ref) : null;
+  const ref = passedEffective ?? today;
+  const ageObj = birth ? diffYMD(birth, ref) : null;
 
-    const isBirthdayToday =
-  birth && !passedEffective ? sameMonthDay(birth, today) : false;
-    const wouldHaveTurned =
-  (birth && passedEffective && sameMonthDay(birth, today))
+  // Living only: "Birthday Today"
+  const isBirthdayToday = !!(birth && !passedEffective && sameMonthDay(birth, today));
+
+  // Deceased only: "Remembering [Name] today — would have turned X."
+  const wouldHaveTurned = (birth && passedEffective && sameMonthDay(birth, today))
     ? (today.getFullYear() - birth.getFullYear())
     : null;
 
+  // Used for upcoming birthdays line (filtered to living in render)
+  const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
 
-    const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
+  return {
+    ...r,
+    name: (r?.name ?? "").toString(),
+    tribute: (r?.tribute ?? "").toString(),
+    _birth: birth,
+    _passed: passedEffective,
+    ageText: birth ? fmtYMD(ageObj) : "—",
+    status: passedEffective ? "deceased" : "alive",
+    _photos: photoList(r),
+    isBirthdayToday,
+    nextBirthday,
+    wouldHaveTurned
+  };
+}
 
-    return {
-      ...r,
-      name: (r?.name ?? "").toString(),
-      tribute: (r?.tribute ?? "").toString(),
-      _birth: birth,
-      _passed: passedEffective,
-      ageText: birth ? fmtYMD(ageObj) : "—",
-      status: passedEffective ? "deceased" : "alive",
-      _photos: photoList(r),
-      isBirthdayToday,
-      nextBirthday,
-      wouldHaveTurned
-    };
-  }
 
   function filterSort(rows) {
     let out = Array.isArray(rows) ? rows : [];
@@ -249,26 +251,27 @@
 
     // Upcoming birthdays (next 30 days)
     if (birthdayLine) {
-    const soon = computed
-  .filter(r => r.status === "alive" && r._birth && r.nextBirthday)
-  .map(r => ({ name: r.name, date: r.nextBirthday }))
-  .filter(x => {
-    const diffDays = Math.ceil((x.date - today) / 86400000);
-    return diffDays >= 0 && diffDays <= 30;
-  })
-  .sort((a, b) => a.date - b.date);
+  const soon = computed
+    .filter(r => r.status === "alive" && r._birth && r.nextBirthday)
+    .map(r => ({ name: r.name, date: r.nextBirthday }))
+    .filter(x => {
+      const diffDays = Math.ceil((x.date - today) / 86400000);
+      return diffDays >= 0 && diffDays <= 30;
+    })
+    .sort((a, b) => a.date - b.date);
 
-      if (soon.length) {
-        birthdayLine.innerHTML =
-          `📅 <strong>Upcoming birthdays (next 30 days):</strong> ` +
-          soon.map(x =>
-            `<span>${escapeHtml(x.name)} (${x.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</span>`
-          ).join(" • ");
-        birthdayLine.hidden = false;
-      } else {
-        birthdayLine.hidden = true;
-      }
-    }
+  if (soon.length) {
+    birthdayLine.innerHTML =
+      `📅 <strong>Upcoming birthdays (next 30 days):</strong> ` +
+      soon.map(x =>
+        `<span>${escapeHtml(x.name)} (${x.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</span>`
+      ).join(" • ");
+    birthdayLine.hidden = false;
+  } else {
+    birthdayLine.hidden = true;
+  }
+}
+
 
     cards.innerHTML = "";
     if (filtered.length === 0) {
