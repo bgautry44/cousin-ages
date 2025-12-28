@@ -8,14 +8,19 @@
     q: ""
   };
 
-  // --- helpers ---
-  function normalize(s) { return (s || "").toString().toLowerCase().trim(); }
+  // -----------------------
+  // Helpers
+  // -----------------------
+  function normalize(s) {
+    return (s || "").toString().toLowerCase().trim();
+  }
 
   function localDateFromYMD(y, m, d) {
     const dt = new Date(Number(y), Number(m) - 1, Number(d));
     return isNaN(dt.getTime()) ? null : dt;
   }
 
+  // Parse as LOCAL date to avoid 1-day shifts
   function parseISODate(v) {
     if (v == null || v === "") return null;
 
@@ -41,6 +46,18 @@
     return new Date(now.getFullYear(), now.getMonth(), now.getDate());
   }
 
+  function sameMonthDay(a, b) {
+    return a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function nextBirthdayDate(birth, today) {
+    if (!birth) return null;
+    const d = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
+    if (d < today) return new Date(today.getFullYear() + 1, birth.getMonth(), birth.getDate());
+    return d;
+  }
+
+  // Calendar-accurate Y/M/D difference
   function diffYMD(from, to) {
     let y = to.getFullYear() - from.getFullYear();
     let m = to.getMonth() - from.getMonth();
@@ -74,20 +91,28 @@
 
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (s) => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
     }[s]));
   }
 
-  // Normalize photos:
+  // Photos:
   // - prefer r.photos (array)
-  // - else fall back to r.photo (single)
+  // - else fall back to r.photo (single string)
   function photoList(r) {
     const arr = Array.isArray(r?.photos) ? r.photos : null;
     if (arr && arr.length) return arr.map(x => String(x).trim()).filter(Boolean);
-    const single = r?.photo ? String(r.photo).trim() : "";
+
+    const single = (typeof r?.photo === "string") ? String(r.photo).trim() : "";
     return single ? [single] : [];
   }
 
+  // -----------------------
+  // Data computation
+  // -----------------------
   function computeRow(r) {
     const birth = parseISODate(r.birthdate);
     const passed = parseISODate(r.passed);
@@ -98,6 +123,9 @@
     const ref = passedEffective ?? today;
     const ageObj = birth ? diffYMD(birth, ref) : null;
 
+    const isBirthdayToday = birth ? sameMonthDay(birth, today) : false;
+    const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
+
     return {
       ...r,
       name: (r?.name ?? "").toString(),
@@ -106,7 +134,9 @@
       _passed: passedEffective,
       ageText: birth ? fmtYMD(ageObj) : "—",
       status: passedEffective ? "deceased" : "alive",
-      _photos: photoList(r)
+      _photos: photoList(r),
+      isBirthdayToday,
+      nextBirthday
     };
   }
 
@@ -118,6 +148,7 @@
     const q = normalize(state.q);
     if (q) out = out.filter(r => normalize(r.name).includes(q));
 
+    // Sort by DOB only (birth order)
     out = out.slice().sort((a, b) => {
       const aT = a._birth ? a._birth.getTime() : Number.POSITIVE_INFINITY;
       const bT = b._birth ? b._birth.getTime() : Number.POSITIVE_INFINITY;
@@ -128,8 +159,9 @@
     return out;
   }
 
-  // --- carousel engine ---
-  // We keep timers so re-renders do not leak intervals
+  // -----------------------
+  // Carousel engine
+  // -----------------------
   const carouselTimers = new Map();
 
   function stopCarouselFor(imgEl) {
@@ -144,39 +176,50 @@
     if (!imgEl || !Array.isArray(photos) || photos.length === 0) return;
 
     let idx = 0;
-    imgEl.src = photos[0];
 
-    // If only one photo, no need to rotate
-    if (photos.length === 1) return;
-
-    const tickMs = 2600; // smooth but not frantic on phones
-
-    const timer = setInterval(() => {
-      idx = (idx + 1) % photos.length;
+    const setSrc = () => {
       imgEl.classList.remove("fadeIn");
-      // force reflow to restart animation
-      void imgEl.offsetWidth;
+      void imgEl.offsetWidth; // restart animation
       imgEl.src = photos[idx];
       imgEl.classList.add("fadeIn");
+    };
+
+    // Skip broken images (prevents getting "stuck" on a missing file)
+    imgEl.onerror = () => {
+      if (photos.length <= 1) return;
+      idx = (idx + 1) % photos.length;
+      setSrc();
+    };
+
+    setSrc();
+
+    // If only one photo, no rotation needed
+    if (photos.length === 1) return;
+
+    const tickMs = 2600;
+    const timer = setInterval(() => {
+      idx = (idx + 1) % photos.length;
+      setSrc();
     }, tickMs);
 
     carouselTimers.set(imgEl, timer);
 
-    // Tap to advance immediately (nice on mobile)
+    // Tap to advance
     imgEl.addEventListener("click", () => {
       idx = (idx + 1) % photos.length;
-      imgEl.classList.remove("fadeIn");
-      void imgEl.offsetWidth;
-      imgEl.src = photos[idx];
-      imgEl.classList.add("fadeIn");
+      setSrc();
     }, { once: false });
   }
 
+  // -----------------------
+  // Render
+  // -----------------------
   function render() {
     const cards = $("cards");
     const empty = $("empty");
     const asOf = $("asOf");
     const count = $("count");
+    const birthdayLine = $("birthdayLine"); // optional (add in index.html)
 
     if (!cards || !empty || !asOf || !count) {
       console.error("Missing required DOM elements (cards, empty, asOf, count).");
@@ -189,10 +232,35 @@
     const computed = state.data.map(computeRow);
     const filtered = filterSort(computed);
 
-    asOf.textContent = `As of: ${todayLocal().toLocaleDateString(undefined, {
+    const today = todayLocal();
+
+    asOf.textContent = `As of: ${today.toLocaleDateString(undefined, {
       weekday: "short", year: "numeric", month: "short", day: "numeric"
     })}`;
     count.textContent = `Shown: ${filtered.length} / ${computed.length}`;
+
+    // Upcoming birthdays (next 30 days)
+    if (birthdayLine) {
+      const soon = computed
+        .filter(r => r._birth && r.nextBirthday)
+        .map(r => ({ name: r.name, date: r.nextBirthday }))
+        .filter(x => {
+          const diffDays = Math.ceil((x.date - today) / 86400000);
+          return diffDays >= 0 && diffDays <= 30;
+        })
+        .sort((a, b) => a.date - b.date);
+
+      if (soon.length) {
+        birthdayLine.innerHTML =
+          `📅 <strong>Upcoming birthdays (next 30 days):</strong> ` +
+          soon.map(x =>
+            `<span>${escapeHtml(x.name)} (${x.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</span>`
+          ).join(" • ");
+        birthdayLine.hidden = false;
+      } else {
+        birthdayLine.hidden = true;
+      }
+    }
 
     cards.innerHTML = "";
     if (filtered.length === 0) {
@@ -203,8 +271,15 @@
 
     for (const r of filtered) {
       const isMemorial = r.status === "deceased";
-      const badgeClass = isMemorial ? "badge deceased" : "badge alive";
-      const badgeText = isMemorial ? "In Memoriam" : "Living";
+      const isBirthday = !!r.isBirthdayToday;
+
+      let badgeClass = isMemorial ? "badge deceased" : "badge alive";
+      let badgeText = isMemorial ? "In Memoriam" : "Living";
+
+      if (isBirthday) {
+        badgeClass = "badge birthday";
+        badgeText = "🎂 Birthday Today";
+      }
 
       const years = (r._birth || r._passed)
         ? `${r._birth ? r._birth.getFullYear() : "—"} – ${r._passed ? r._passed.getFullYear() : "—"}`
@@ -213,14 +288,20 @@
       const photos = r._photos;
 
       const card = document.createElement("section");
-      card.className = "card" + (isMemorial ? " memorial" : "");
+      card.className =
+        "card" +
+        (isMemorial ? " memorial" : "") +
+        (isBirthday ? " birthdayToday" : "");
 
-      // Avatar area: image if we have at least one photo, else placeholder
       const avatarHtml = photos.length
         ? `
           <div class="avatarWrap">
             <img class="avatar" alt="${escapeHtml(r.name || "Photo")}" loading="lazy" />
-            ${photos.length > 1 ? `<div class="avatarDot" title="Multiple photos">↻</div>` : (isMemorial ? `<div class="avatarDot" title="In Memoriam">✦</div>` : ``)}
+            ${
+              photos.length > 1
+                ? `<div class="avatarDot" title="Multiple photos">↻</div>`
+                : (isMemorial ? `<div class="avatarDot" title="In Memoriam">✦</div>` : ``)
+            }
           </div>
         `
         : `
@@ -259,12 +340,14 @@
 
       cards.appendChild(card);
 
-      // Start carousel if there is an <img> avatar
       const imgEl = card.querySelector("img.avatar");
       if (imgEl && photos.length) startCarousel(imgEl, photos);
     }
   }
 
+  // -----------------------
+  // Excel date helpers (kept for compatibility; safe even if unused)
+  // -----------------------
   function toISODateLocal(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -286,7 +369,6 @@
         const d = localDateFromYMD(m[1], m[2], m[3]);
         return d ? toISODateLocal(d) : null;
       }
-
       const d = new Date(s);
       if (!isNaN(d.getTime())) {
         return toISODateLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -304,17 +386,28 @@
     return null;
   }
 
+  // -----------------------
+  // UI hooks
+  // -----------------------
   function hookUI() {
     const searchEl = $("search");
     const showDeceasedEl = $("showDeceased");
     const sortBtn = $("sortBtn");
 
     if (searchEl) {
-      searchEl.addEventListener("input", (e) => { state.q = e.target.value; render(); });
+      searchEl.addEventListener("input", (e) => {
+        state.q = e.target.value;
+        render();
+      });
     }
+
     if (showDeceasedEl) {
-      showDeceasedEl.addEventListener("change", (e) => { state.showDeceased = e.target.checked; render(); });
+      showDeceasedEl.addEventListener("change", (e) => {
+        state.showDeceased = e.target.checked;
+        render();
+      });
     }
+
     if (sortBtn) {
       sortBtn.addEventListener("click", () => {
         state.sortOldestFirst = !state.sortOldestFirst;
@@ -323,60 +416,11 @@
       });
     }
 
+    // If you removed Excel upload UI, this will safely do nothing.
     const fileInput = $("fileInput");
     if (fileInput) {
-      fileInput.addEventListener("change", async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-
-        try {
-          if (typeof XLSX === "undefined") {
-            alert("Excel import library (XLSX) is not loaded on this page.");
-            return;
-          }
-
-          const buf = await file.arrayBuffer();
-          const wb = XLSX.read(buf, { type: "array" });
-          const firstSheetName = wb.SheetNames[0];
-          const ws = wb.Sheets[firstSheetName];
-          const rows = XLSX.utils.sheet_to_json(ws, { defval: null });
-
-          // Columns: NAME, BIRTHDATE, PASSED, PHOTO or PHOTOS, TRIBUTE (case-insensitive)
-          const mapped = rows.map((r) => {
-            const keys = Object.keys(r);
-            const get = (k) => r[keys.find((x) => String(x).toLowerCase().trim() === k)] ?? null;
-
-            const name = get("name");
-            const birth = get("birthdate");
-            const passed = get("passed");
-            const photo = get("photo");
-            const photos = get("photos");    // optional: comma-separated list
-            const tribute = get("tribute");  // optional
-
-            let photosArr = [];
-            if (photos) {
-              photosArr = String(photos).split(",").map(x => x.trim()).filter(Boolean);
-            } else if (photo) {
-              photosArr = [String(photo).trim()].filter(Boolean);
-            }
-
-            return {
-              name: name ? String(name).trim() : "",
-              birthdate: excelDateToISO(birth),
-              passed: excelDateToISO(passed),
-              photos: photosArr.length ? photosArr : undefined,
-              tribute: tribute ? String(tribute).trim() : ""
-            };
-          }).filter((x) => x.name || x.birthdate || x.passed || (x.photos && x.photos.length) || x.tribute);
-
-          state.data = mapped;
-          render();
-        } catch (err) {
-          alert("Could not read that Excel file. Please confirm it has columns like NAME, BIRTHDATE, PASSED (optional: PHOTO/PHOTOS, TRIBUTE).");
-          console.error(err);
-        } finally {
-          e.target.value = "";
-        }
+      fileInput.addEventListener("change", async () => {
+        alert("Excel upload is disabled in this version of the app.");
       });
     }
   }
@@ -384,3 +428,4 @@
   hookUI();
   render();
 })();
+
