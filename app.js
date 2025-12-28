@@ -331,7 +331,7 @@
         : "";
       const wouldHaveTurnedBlock =
   (isMemorial && r.wouldHaveTurned != null)
-    ? `<div class="wouldHaveTurned">Would have turned <strong>${r.wouldHaveTurned}</strong> today.</div>`
+    ? `<div class="wouldHaveTurned">Remembering <strong>${escapeHtml(r.name)}</strong> today — would have turned <strong>${r.wouldHaveTurned}</strong>.</div>`
     : "";
 
       card.innerHTML = `
