@@ -150,6 +150,7 @@
 }
 
 
+
   function filterSort(rows) {
     let out = Array.isArray(rows) ? rows : [];
 
@@ -215,10 +216,11 @@
     carouselTimers.set(imgEl, timer);
 
     // Tap to advance
-    imgEl.addEventListener("click", () => {
-      idx = (idx + 1) % photos.length;
-      setSrc();
-    }, { once: false });
+    imgEl.onclick = () => {
+    idx = (idx + 1) % photos.length;
+    setSrc();
+  };
+
   }
 
   // -----------------------
@@ -271,7 +273,6 @@
     birthdayLine.hidden = true;
   }
 }
-
 
     cards.innerHTML = "";
     if (filtered.length === 0) {
