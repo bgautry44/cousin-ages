@@ -217,9 +217,9 @@
 
     // Tap to advance
     imgEl.onclick = () => {
-    idx = (idx + 1) % photos.length;
-    setSrc();
-  };
+  idx = (idx + 1) % photos.length;
+  setSrc();
+};
 
   }
 
