@@ -99,6 +99,25 @@
     }[s]));
   }
 
+  // -----------------------
+  // Contact helpers (NEW)
+  // -----------------------
+  function normalizeEmail(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+    return ok ? s : "";
+  }
+
+  function phoneToTelHref(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return "";
+    const hasPlus = /^\s*\+/.test(s);
+    const digits = s.replace(/[^\d]/g, "");
+    if (!digits || digits.length < 7) return "";
+    return "tel:" + ((hasPlus ? "+" : "") + digits);
+  }
+
   // Photos:
   // - prefer r.photos (array)
   // - else fall back to r.photo (single string)
@@ -114,42 +133,48 @@
   // Data computation
   // -----------------------
   function computeRow(r) {
-  const birth = parseISODate(r.birthdate);
-  const passed = parseISODate(r.passed);
+    const birth = parseISODate(r.birthdate);
+    const passed = parseISODate(r.passed);
 
-  const today = todayLocal();
-  const passedEffective = (passed && passed.getTime() <= today.getTime()) ? passed : null;
+    const today = todayLocal();
+    const passedEffective = (passed && passed.getTime() <= today.getTime()) ? passed : null;
 
-  const ref = passedEffective ?? today;
-  const ageObj = birth ? diffYMD(birth, ref) : null;
+    const ref = passedEffective ?? today;
+    const ageObj = birth ? diffYMD(birth, ref) : null;
 
-  // Living only: "Birthday Today"
-  const isBirthdayToday = !!(birth && !passedEffective && sameMonthDay(birth, today));
+    // Living only: "Birthday Today"
+    const isBirthdayToday = !!(birth && !passedEffective && sameMonthDay(birth, today));
 
-  // Deceased only: "Remembering [Name] today — would have turned X."
-  const wouldHaveTurned = (birth && passedEffective && sameMonthDay(birth, today))
-    ? (today.getFullYear() - birth.getFullYear())
-    : null;
+    // Deceased only: "Remembering [Name] today — would have turned X."
+    const wouldHaveTurned = (birth && passedEffective && sameMonthDay(birth, today))
+      ? (today.getFullYear() - birth.getFullYear())
+      : null;
 
-  // Used for upcoming birthdays line (filtered to living in render)
-  const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
+    // Used for upcoming birthdays line (filtered to living in render)
+    const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
 
-  return {
-    ...r,
-    name: (r?.name ?? "").toString(),
-    tribute: (r?.tribute ?? "").toString(),
-    _birth: birth,
-    _passed: passedEffective,
-    ageText: birth ? fmtYMD(ageObj) : "—",
-    status: passedEffective ? "deceased" : "alive",
-    _photos: photoList(r),
-    isBirthdayToday,
-    nextBirthday,
-    wouldHaveTurned
-  };
-}
+    // Contact (optional)
+    const phoneRaw = (r?.phone ?? "").toString().trim();
+    const emailClean = normalizeEmail(r?.email);
 
+    return {
+      ...r,
+      name: (r?.name ?? "").toString(),
+      tribute: (r?.tribute ?? "").toString(),
+      _birth: birth,
+      _passed: passedEffective,
+      ageText: birth ? fmtYMD(ageObj) : "—",
+      status: passedEffective ? "deceased" : "alive",
+      _photos: photoList(r),
+      isBirthdayToday,
+      nextBirthday,
+      wouldHaveTurned,
 
+      _phoneDisplay: phoneRaw,
+      _phoneHref: phoneToTelHref(phoneRaw),
+      _email: emailClean
+    };
+  }
 
   function filterSort(rows) {
     let out = Array.isArray(rows) ? rows : [];
@@ -217,10 +242,9 @@
 
     // Tap to advance
     imgEl.onclick = () => {
-  idx = (idx + 1) % photos.length;
-  setSrc();
-};
-
+      idx = (idx + 1) % photos.length;
+      setSrc();
+    };
   }
 
   // -----------------------
@@ -253,26 +277,26 @@
 
     // Upcoming birthdays (next 30 days)
     if (birthdayLine) {
-  const soon = computed
-    .filter(r => r.status === "alive" && r._birth && r.nextBirthday)
-    .map(r => ({ name: r.name, date: r.nextBirthday }))
-    .filter(x => {
-      const diffDays = Math.ceil((x.date - today) / 86400000);
-      return diffDays >= 0 && diffDays <= 30;
-    })
-    .sort((a, b) => a.date - b.date);
+      const soon = computed
+        .filter(r => r.status === "alive" && r._birth && r.nextBirthday)
+        .map(r => ({ name: r.name, date: r.nextBirthday }))
+        .filter(x => {
+          const diffDays = Math.ceil((x.date - today) / 86400000);
+          return diffDays >= 0 && diffDays <= 30;
+        })
+        .sort((a, b) => a.date - b.date);
 
-  if (soon.length) {
-    birthdayLine.innerHTML =
-      `📅 <strong>Upcoming birthdays (next 30 days):</strong> ` +
-      soon.map(x =>
-        `<span>${escapeHtml(x.name)} (${x.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</span>`
-      ).join(" • ");
-    birthdayLine.hidden = false;
-  } else {
-    birthdayLine.hidden = true;
-  }
-}
+      if (soon.length) {
+        birthdayLine.innerHTML =
+          `📅 <strong>Upcoming birthdays (next 30 days):</strong> ` +
+          soon.map(x =>
+            `<span>${escapeHtml(x.name)} (${x.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</span>`
+          ).join(" • ");
+        birthdayLine.hidden = false;
+      } else {
+        birthdayLine.hidden = true;
+      }
+    }
 
     cards.innerHTML = "";
     if (filtered.length === 0) {
@@ -333,10 +357,31 @@
       const tributeBlock = (isMemorial && r.tribute && r.tribute.trim())
         ? `<div class="tribute">“${escapeHtml(r.tribute.trim())}”</div>`
         : "";
+
       const wouldHaveTurnedBlock =
-  (isMemorial && r.wouldHaveTurned != null)
-    ? `<div class="wouldHaveTurned">Remembering <strong>${escapeHtml(r.name)}</strong> today — would have turned <strong>${r.wouldHaveTurned}</strong>.</div>`
-    : "";
+        (isMemorial && r.wouldHaveTurned != null)
+          ? `<div class="wouldHaveTurned">Remembering <strong>${escapeHtml(r.name)}</strong> today — would have turned <strong>${r.wouldHaveTurned}</strong>.</div>`
+          : "";
+
+      // Contact block (NEW)
+      const phoneLink = (r._phoneDisplay && r._phoneHref)
+        ? `<a class="contactLink" href="${escapeHtml(r._phoneHref)}">${escapeHtml(r._phoneDisplay)}</a>`
+        : "";
+
+      const emailLink = (r._email)
+        ? `<a class="contactLink" href="mailto:${encodeURIComponent(r._email)}">${escapeHtml(r._email)}</a>`
+        : "";
+
+      const contactBlock = (phoneLink || emailLink)
+        ? `
+          <div class="row">
+            <span>Contact</span>
+            <span class="value contactValue">
+              ${[phoneLink, emailLink].filter(Boolean).join(" · ")}
+            </span>
+          </div>
+        `
+        : ``;
 
       card.innerHTML = `
         <div class="cardTop">
@@ -351,6 +396,7 @@
         <div class="row"><span>Birthdate</span><span class="value">${fmtDate(r._birth)}</span></div>
         <div class="row"><span>${isMemorial ? "Age at passing" : "Current age"}</span><span class="value">${escapeHtml(r.ageText)}</span></div>
         <div class="row"><span>Passed</span><span class="value">${fmtDate(r._passed)}</span></div>
+        ${contactBlock}
         ${tributeBlock}
         ${wouldHaveTurnedBlock}
       `;
@@ -445,4 +491,3 @@
   hookUI();
   render();
 })();
-
