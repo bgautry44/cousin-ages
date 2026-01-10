@@ -1,4 +1,3 @@
-
 :root{
   --bg:#0b0f14;
   --card:#121826;
@@ -119,6 +118,53 @@ h1{
   font-weight:600;
   text-align:right;
 }
+
+/* ============================
+   Contact links (NEW)
+   ============================ */
+.contactValue{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  flex-wrap:wrap;            /* prevents overflow on small screens */
+  max-width: 66%;            /* keeps label side readable */
+}
+
+.contactLink{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.14);
+  background: rgba(14,20,34,.65);
+  color: var(--text);
+  text-decoration:none;
+  font-weight:600;
+  line-height:1;
+  white-space:nowrap;
+}
+
+.contactLink:hover{
+  border-color: rgba(255,122,26,.45);
+  box-shadow: 0 0 0 1px rgba(255,122,26,.18);
+}
+
+.contactLink:active{
+  transform: translateY(1px);
+}
+
+/* Optional: slightly smaller chips on very narrow screens */
+@media (max-width: 360px){
+  .contactLink{
+    padding:5px 8px;
+    font-size:12px;
+  }
+  .contactValue{
+    max-width: 62%;
+  }
+}
+
 .badge{
   display:inline-flex;
   align-items:center;
@@ -282,4 +328,3 @@ h1{
 .birthdayLine span{
   white-space:nowrap;
 }
-
