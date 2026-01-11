@@ -195,8 +195,8 @@
     return out;
   }
 
-  // -----------------------
-  // Carousel engine (hardened)
+      // -----------------------
+  // Carousel engine (auto-rotate only; tap opens modal)
   // -----------------------
   const carouselTimers = new Map();
 
@@ -204,12 +204,6 @@
     const t = carouselTimers.get(imgEl);
     if (t) clearInterval(t);
     carouselTimers.delete(imgEl);
-
-    // Avoid accumulating old handlers
-    if (imgEl && imgEl._carouselClickHandler) {
-      imgEl.removeEventListener("click", imgEl._carouselClickHandler);
-      delete imgEl._carouselClickHandler;
-    }
 
     if (imgEl) {
       imgEl.onerror = null;
@@ -219,9 +213,9 @@
 
   function startCarousel(imgEl, photos) {
     stopCarouselFor(imgEl);
+
     if (!imgEl || !Array.isArray(photos) || photos.length === 0) return;
 
-    // Keep only non-empty strings
     const safePhotos = photos.map(x => String(x || "").trim()).filter(Boolean);
     if (!safePhotos.length) return;
 
@@ -230,14 +224,13 @@
 
     const setSrc = () => {
       imgEl.classList.remove("fadeIn");
-      void imgEl.offsetWidth; // restart animation
+      void imgEl.offsetWidth;
       imgEl.src = safePhotos[idx];
       imgEl.classList.add("fadeIn");
     };
 
     imgEl.onload = () => { consecutiveErrors = 0; };
 
-    // Skip broken images (prevents getting "stuck" on a missing file)
     imgEl.onerror = () => {
       consecutiveErrors++;
       if (consecutiveErrors >= safePhotos.length) {
@@ -249,6 +242,20 @@
     };
 
     setSrc();
+
+    // Auto-rotate only (no tap-to-advance here)
+    if (safePhotos.length === 1) return;
+
+    const tickMs = 2600;
+    const timer = setInterval(() => {
+      idx = (idx + 1) % safePhotos.length;
+      setSrc();
+    }, tickMs);
+
+    carouselTimers.set(imgEl, timer);
+  }
+
+  
 
     // If only one photo, no rotation needed
     if (safePhotos.length === 1) return;
