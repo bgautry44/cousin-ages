@@ -543,6 +543,114 @@
     return wrap;
   }
 
+   function normalizeAnnouncements(v, maxItems = 10) {
+  const arr = Array.isArray(v) ? v : [];
+  const out = [];
+
+  for (const item of arr) {
+    if (!item || typeof item !== "object") continue;
+
+    const title = String(item.title ?? "").trim();
+    const text = String(item.text ?? item.message ?? "").trim();
+    const location = String(item.location ?? "").trim();
+    const date = parseISODate(item.date);
+
+    // Skip completely empty items
+    if (!title && !text && !location && !date) continue;
+
+    out.push({
+      date: date || null,
+      title: title || "Announcement",
+      text,
+      location
+    });
+  }
+
+  // Sort: newest first (dated items first, undated last)
+  out.sort((a, b) => {
+    const at = a.date instanceof Date ? a.date.getTime() : NaN;
+    const bt = b.date instanceof Date ? b.date.getTime() : NaN;
+    const aValid = Number.isFinite(at);
+    const bValid = Number.isFinite(bt);
+
+    if (!aValid && !bValid) return a.title.localeCompare(b.title);
+    if (!aValid) return 1;
+    if (!bValid) return -1;
+    return bt - at;
+  });
+
+  return out.slice(0, maxItems);
+}
+
+function upsertAnnouncementsHost(cardsEl) {
+  // Create a host div ABOVE cards if it doesn't exist
+  let host = document.getElementById("announcements");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "announcements";
+
+    const parent = cardsEl.parentNode;
+    parent.insertBefore(host, cardsEl);
+  }
+  return host;
+}
+
+function makeAnnouncementsBlock(posts) {
+  const list = Array.isArray(posts) ? posts : [];
+  if (!list.length) return null;
+
+  const wrap = document.createElement("section");
+  wrap.className = "annPanel";
+
+  const h = document.createElement("div");
+  h.className = "annTitle";
+  h.textContent = "Announcements";
+  wrap.appendChild(h);
+
+  const ul = document.createElement("ul");
+  ul.className = "annList";
+
+  for (const p of list) {
+    const li = document.createElement("li");
+    li.className = "annItem";
+
+    if (p.date instanceof Date && !Number.isNaN(p.date.getTime())) {
+      const d = document.createElement("div");
+      d.className = "annDate";
+      d.textContent = p.date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      li.appendChild(d);
+    }
+
+    if (p.title) {
+      const t = document.createElement("div");
+      t.className = "annHeading";
+      t.textContent = p.title;
+      li.appendChild(t);
+    }
+
+    if (p.location) {
+      const l = document.createElement("div");
+      l.className = "annLocation";
+      l.textContent = `📍 ${p.location}`;
+      li.appendChild(l);
+    }
+
+    if (p.text) {
+      const body = document.createElement("div");
+      body.className = "annText";
+      body.textContent = p.text;
+      li.appendChild(body);
+    }
+
+    ul.appendChild(li);
+  }
+
+  if (!ul.children.length) return null;
+
+  wrap.appendChild(ul);
+  return wrap;
+}
+
   // ============================
   // Render
   // ============================
