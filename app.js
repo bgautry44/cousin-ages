@@ -1,33 +1,36 @@
 (function () {
+  "use strict";
+
   const $ = (id) => document.getElementById(id);
 
+  // ============================
+  // State
+  // ============================
   const state = {
     data: Array.isArray(window.COUSIN_DATA) ? window.COUSIN_DATA : [],
+    announcements: Array.isArray(window.COUSIN_ANNOUNCEMENTS) ? window.COUSIN_ANNOUNCEMENTS : [],
     showDeceased: true,
     sortOldestFirst: true,
     q: ""
   };
 
-  // -----------------------
-  // Helpers
-  // -----------------------
-  function normalize(s) {
-    return (s || "").toString().toLowerCase().trim();
-  }
-
+  // ============================
+  // Date helpers (LOCAL dates)
+  // ============================
   function localDateFromYMD(y, m, d) {
     const dt = new Date(Number(y), Number(m) - 1, Number(d));
     return isNaN(dt.getTime()) ? null : dt;
   }
 
-  // Parse as LOCAL date to avoid 1-day shifts
   function parseISODate(v) {
     if (v == null || v === "") return null;
 
+    // Already Date
     if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
       return new Date(v.getFullYear(), v.getMonth(), v.getDate());
     }
 
+    // String
     if (typeof v === "string") {
       const s = v.trim();
       const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -53,11 +56,9 @@
   function nextBirthdayDate(birth, today) {
     if (!birth) return null;
     const d = new Date(today.getFullYear(), birth.getMonth(), birth.getDate());
-    if (d < today) return new Date(today.getFullYear() + 1, birth.getMonth(), birth.getDate());
-    return d;
+    return (d < today) ? new Date(today.getFullYear() + 1, birth.getMonth(), birth.getDate()) : d;
   }
 
-  // Calendar-accurate Y/M/D difference
   function diffYMD(from, to) {
     let y = to.getFullYear() - from.getFullYear();
     let m = to.getMonth() - from.getMonth();
@@ -78,15 +79,22 @@
   function fmtYMD(o) {
     if (!o) return "—";
     return [
-      `${o.y} year${o.y === 1 ? "" : "s"}`,
-      `${o.m} month${o.m === 1 ? "" : "s"}`,
-      `${o.d} day${o.d === 1 ? "" : "s"}`
+      o.y + " year" + (o.y === 1 ? "" : "s"),
+      o.m + " month" + (o.m === 1 ? "" : "s"),
+      o.d + " day" + (o.d === 1 ? "" : "s")
     ].join(", ");
   }
 
   function fmtDate(d) {
     if (!d) return "—";
     return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  // ============================
+  // Text helpers
+  // ============================
+  function normalize(s) {
+    return (s || "").toString().toLowerCase().trim();
   }
 
   function escapeHtml(str) {
@@ -99,9 +107,9 @@
     }[s]));
   }
 
-  // -----------------------
+  // ============================
   // Contact helpers
-  // -----------------------
+  // ============================
   function normalizeEmail(raw) {
     const s = String(raw || "").trim();
     if (!s) return "";
@@ -122,16 +130,24 @@
   // - prefer r.photos (array)
   // - else fall back to r.photo (single string)
   function photoList(r) {
-    const arr = Array.isArray(r?.photos) ? r.photos : null;
-    if (arr && arr.length) return arr.map(x => String(x).trim()).filter(Boolean);
+    const out = [];
 
-    const single = (typeof r?.photo === "string") ? String(r.photo).trim() : "";
-    return single ? [single] : [];
+    if (r && Array.isArray(r.photos)) {
+      for (let i = 0; i < r.photos.length; i++) {
+        const s = String(r.photos[i] || "").trim();
+        if (s) out.push(s);
+      }
+    } else if (r && typeof r.photo === "string") {
+      const s = String(r.photo || "").trim();
+      if (s) out.push(s);
+    }
+
+    return out;
   }
 
-  // -----------------------
+  // ============================
   // Data computation
-  // -----------------------
+  // ============================
   function computeRow(r) {
     const birth = parseISODate(r.birthdate);
     const passed = parseISODate(r.passed);
@@ -139,71 +155,68 @@
     const today = todayLocal();
     const passedEffective = (passed && passed.getTime() <= today.getTime()) ? passed : null;
 
-    const ref = passedEffective ?? today;
+    const ref = passedEffective || today;
     const ageObj = birth ? diffYMD(birth, ref) : null;
 
-    // Living only: "Birthday Today"
     const isBirthdayToday = !!(birth && !passedEffective && sameMonthDay(birth, today));
-
-    // Deceased only: "Remembering [Name] today — would have turned X."
     const wouldHaveTurned = (birth && passedEffective && sameMonthDay(birth, today))
       ? (today.getFullYear() - birth.getFullYear())
       : null;
 
-    // Used for upcoming birthdays line (filtered to living in render)
     const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
 
-    // Contact (optional)
-    const phoneRaw = (r?.phone ?? "").toString().trim();
-    const emailClean = normalizeEmail(r?.email);
+    const phoneRaw = (r && r.phone != null) ? String(r.phone).trim() : "";
+    const emailClean = normalizeEmail(r ? r.email : "");
 
-    return {
-      ...r,
-      name: (r?.name ?? "").toString(),
-      tribute: (r?.tribute ?? "").toString(),
+    return Object.assign({}, r, {
+      name: (r && r.name != null) ? String(r.name) : "",
+      tribute: (r && r.tribute != null) ? String(r.tribute) : "",
       _birth: birth,
       _passed: passedEffective,
       ageText: birth ? fmtYMD(ageObj) : "—",
       status: passedEffective ? "deceased" : "alive",
       _photos: photoList(r),
-      isBirthdayToday,
-      nextBirthday,
-      wouldHaveTurned,
-
+      isBirthdayToday: isBirthdayToday,
+      nextBirthday: nextBirthday,
+      wouldHaveTurned: wouldHaveTurned,
       _phoneDisplay: phoneRaw,
       _phoneHref: phoneToTelHref(phoneRaw),
       _email: emailClean
-    };
+    });
   }
 
   function filterSort(rows) {
-    let out = Array.isArray(rows) ? rows : [];
+    let out = Array.isArray(rows) ? rows.slice() : [];
 
     if (!state.showDeceased) out = out.filter(r => r.status !== "deceased");
 
     const q = normalize(state.q);
     if (q) out = out.filter(r => normalize(r.name).includes(q));
 
-    // Sort by DOB only (birth order)
-    out = out.slice().sort((a, b) => {
+    out.sort((a, b) => {
       const aT = a._birth ? a._birth.getTime() : Number.POSITIVE_INFINITY;
       const bT = b._birth ? b._birth.getTime() : Number.POSITIVE_INFINITY;
       if (aT !== bT) return state.sortOldestFirst ? (aT - bT) : (bT - aT);
-      return (a.name ?? "").localeCompare(b.name ?? "");
+      return (a.name || "").localeCompare(b.name || "");
     });
 
     return out;
   }
 
-      // -----------------------
-  // Carousel engine (auto-rotate only; tap opens modal)
-  // -----------------------
+  // ============================
+  // Carousel (hardened)
+  // ============================
   const carouselTimers = new Map();
 
   function stopCarouselFor(imgEl) {
     const t = carouselTimers.get(imgEl);
     if (t) clearInterval(t);
     carouselTimers.delete(imgEl);
+
+    if (imgEl && imgEl._carouselClickHandler) {
+      imgEl.removeEventListener("click", imgEl._carouselClickHandler);
+      delete imgEl._carouselClickHandler;
+    }
 
     if (imgEl) {
       imgEl.onerror = null;
@@ -213,11 +226,7 @@
 
   function startCarousel(imgEl, photos) {
     stopCarouselFor(imgEl);
-
     if (!imgEl || !Array.isArray(photos) || photos.length === 0) return;
-
-    const safePhotos = photos.map(x => String(x || "").trim()).filter(Boolean);
-    if (!safePhotos.length) return;
 
     let idx = 0;
     let consecutiveErrors = 0;
@@ -225,7 +234,7 @@
     const setSrc = () => {
       imgEl.classList.remove("fadeIn");
       void imgEl.offsetWidth;
-      imgEl.src = safePhotos[idx];
+      imgEl.src = photos[idx];
       imgEl.classList.add("fadeIn");
     };
 
@@ -233,65 +242,105 @@
 
     imgEl.onerror = () => {
       consecutiveErrors++;
-      if (consecutiveErrors >= safePhotos.length) {
+      if (consecutiveErrors >= photos.length) {
         stopCarouselFor(imgEl);
         return;
       }
-      idx = (idx + 1) % safePhotos.length;
+      idx = (idx + 1) % photos.length;
       setSrc();
     };
 
     setSrc();
 
-    // Auto-rotate only (no tap-to-advance here)
-    if (safePhotos.length === 1) return;
+    if (photos.length === 1) return;
 
     const tickMs = 2600;
     const timer = setInterval(() => {
-      idx = (idx + 1) % safePhotos.length;
-      setSrc();
-    }, tickMs);
-
-    carouselTimers.set(imgEl, timer);
-  }
-
-  
-
-    // If only one photo, no rotation needed
-    if (safePhotos.length === 1) return;
-
-    const tickMs = 2600;
-    const timer = setInterval(() => {
-      idx = (idx + 1) % safePhotos.length;
+      idx = (idx + 1) % photos.length;
       setSrc();
     }, tickMs);
 
     carouselTimers.set(imgEl, timer);
 
-    // Tap to advance (as a proper listener, so we can remove it cleanly)
     imgEl._carouselClickHandler = () => {
-      idx = (idx + 1) % safePhotos.length;
+      idx = (idx + 1) % photos.length;
       setSrc();
     };
     imgEl.addEventListener("click", imgEl._carouselClickHandler);
   }
 
-  // -----------------------
-  // Photo Modal / Lightbox (with swipe)
-  // -----------------------
+  // ============================
+  // Full-screen Photo Modal (Cousins)
+  // ============================
   const modalState = { open: false, photos: [], idx: 0, title: "" };
 
+  function ensurePhotoModal() {
+    if ($("photoModal")) return;
+
+    const modal = document.createElement("div");
+    modal.id = "photoModal";
+    modal.className = "modal";
+    modal.hidden = true;
+    modal.setAttribute("aria-hidden", "true");
+
+    modal.innerHTML = `
+      <div class="modal__backdrop"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-label="Photos">
+        <div class="modal__header">
+          <div id="photoModalTitle" class="modal__title">Photos</div>
+          <button id="photoModalClose" class="modal__close" type="button">Close</button>
+        </div>
+        <div class="modal__body">
+          <button id="photoPrev" class="modal__nav" type="button" aria-label="Previous">‹</button>
+          <div class="modal__stage">
+            <img id="photoModalImg" class="modal__img" alt="Photo" />
+            <div id="photoModalCounter" class="modal__counter"></div>
+          </div>
+          <button id="photoNext" class="modal__nav" type="button" aria-label="Next">›</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Wire once
+    const backdrop = modal.querySelector(".modal__backdrop");
+    const dialog = modal.querySelector(".modal__dialog");
+    const stage = modal.querySelector(".modal__stage");
+
+    const closeBtn = $("photoModalClose");
+    const prevBtn = $("photoPrev");
+    const nextBtn = $("photoNext");
+
+    if (backdrop) backdrop.addEventListener("click", closePhotoModal);
+    if (closeBtn) closeBtn.addEventListener("click", closePhotoModal);
+    if (prevBtn) prevBtn.addEventListener("click", modalPrev);
+    if (nextBtn) nextBtn.addEventListener("click", modalNext);
+
+    modal.addEventListener("click", (e) => { if (e.target === modal) closePhotoModal(); });
+    if (dialog) dialog.addEventListener("click", (e) => e.stopPropagation());
+
+    // Swipe support
+    if (stage) wireModalSwipe(stage);
+
+    document.addEventListener("keydown", (e) => {
+      if (!modalState.open) return;
+      if (e.key === "Escape") closePhotoModal();
+      if (e.key === "ArrowLeft") modalPrev();
+      if (e.key === "ArrowRight") modalNext();
+    });
+  }
+
   function openPhotoModal(title, photos, startIdx) {
+    ensurePhotoModal();
+
     const modal = $("photoModal");
     const img = $("photoModalImg");
     const titleEl = $("photoModalTitle");
 
     if (!modal || !img) return;
 
-    const safePhotos = Array.isArray(photos)
-      ? photos.map(x => String(x || "").trim()).filter(Boolean)
-      : [];
-
+    const safePhotos = Array.isArray(photos) ? photos.slice() : [];
     if (!safePhotos.length) return;
 
     modalState.open = true;
@@ -342,12 +391,13 @@
     }
 
     const src = modalState.photos[modalState.idx];
+
     img.classList.remove("fadeIn");
     void img.offsetWidth;
     img.src = src;
     img.classList.add("fadeIn");
 
-    if (counter) counter.textContent = `${modalState.idx + 1} / ${total}`;
+    if (counter) counter.textContent = (modalState.idx + 1) + " / " + total;
     if (prevBtn) prevBtn.disabled = total <= 1;
     if (nextBtn) nextBtn.disabled = total <= 1;
   }
@@ -376,34 +426,27 @@
     let startY = 0;
     let startT = 0;
 
-    const onStart = (e) => {
+    stageEl.addEventListener("touchstart", (e) => {
       if (!modalState.open) return;
       if (modalState.photos.length <= 1) return;
-
       const t = e.touches && e.touches[0];
       if (!t) return;
-
       tracking = true;
       startX = t.clientX;
       startY = t.clientY;
       startT = Date.now();
-    };
+    }, { passive: true });
 
-    const onMove = (e) => {
+    stageEl.addEventListener("touchmove", (e) => {
       if (!tracking) return;
       const t = e.touches && e.touches[0];
       if (!t) return;
-
       const dx = t.clientX - startX;
       const dy = t.clientY - startY;
+      if (Math.abs(dy) > restraintY && Math.abs(dy) > Math.abs(dx)) tracking = false;
+    }, { passive: true });
 
-      // Cancel swipe if mostly vertical
-      if (Math.abs(dy) > restraintY && Math.abs(dy) > Math.abs(dx)) {
-        tracking = false;
-      }
-    };
-
-    const onEnd = (e) => {
+    stageEl.addEventListener("touchend", (e) => {
       if (!tracking) return;
       tracking = false;
 
@@ -422,81 +465,110 @@
         if (dx < 0) modalNext();
         else modalPrev();
       }
-    };
+    }, { passive: false });
 
-    if (stageEl.dataset.swipeWired === "1") return;
-    stageEl.dataset.swipeWired = "1";
-
-    stageEl.addEventListener("touchstart", onStart, { passive: true });
-    stageEl.addEventListener("touchmove", onMove, { passive: true });
-    stageEl.addEventListener("touchend", onEnd, { passive: false });
     stageEl.addEventListener("touchcancel", () => { tracking = false; }, { passive: true });
   }
 
-  function wirePhotoModalOnce() {
-    const modal = $("photoModal");
-    if (!modal) return;
-    if (modal.dataset.wired === "1") return;
-    modal.dataset.wired = "1";
-
-    const backdrop = modal.querySelector(".modal__backdrop");
-    const dialog = modal.querySelector(".modal__dialog");
-    const stage = modal.querySelector(".modal__stage");
-
-    const closeBtn = $("photoModalClose");
-    const prevBtn = $("photoPrev");
-    const nextBtn = $("photoNext");
-
-    if (backdrop) backdrop.addEventListener("click", closePhotoModal);
-    if (closeBtn) closeBtn.addEventListener("click", closePhotoModal);
-    if (prevBtn) prevBtn.addEventListener("click", modalPrev);
-    if (nextBtn) nextBtn.addEventListener("click", modalNext);
-
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) closePhotoModal();
-    });
-
-    if (dialog) {
-      dialog.addEventListener("click", (e) => e.stopPropagation());
+  // ============================
+  // Global Announcements (GitHub-only)
+  // ============================
+  function upsertAnnouncementsHost() {
+    let host = $("announcements");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "announcements";
+      // Insert above cards if possible
+      const cards = $("cards");
+      if (cards && cards.parentNode) cards.parentNode.insertBefore(host, cards);
+      else document.body.appendChild(host);
     }
-
-    if (stage) wireModalSwipe(stage);
-
-    document.addEventListener("keydown", (e) => {
-      if (!modalState.open) return;
-      if (e.key === "Escape") closePhotoModal();
-      if (e.key === "ArrowLeft") modalPrev();
-      if (e.key === "ArrowRight") modalNext();
-    });
+    return host;
   }
 
-  // -----------------------
+  function makeAnnouncementsBlock(posts) {
+    const list = Array.isArray(posts) ? posts : [];
+    if (!list.length) return null;
+
+    const wrap = document.createElement("section");
+    wrap.className = "annPanel";
+
+    const title = document.createElement("div");
+    title.className = "annTitle";
+    title.textContent = "Announcements";
+    wrap.appendChild(title);
+
+    const ul = document.createElement("ul");
+    ul.className = "annList";
+
+    for (let i = 0; i < list.length; i++) {
+      const p = list[i];
+      if (!p || typeof p !== "object") continue;
+
+      const text = String(p.text || p.message || "").trim();
+      if (!text) continue;
+
+      const li = document.createElement("li");
+      li.className = "annItem";
+
+      // Optional date
+      const when = parseISODate(p.date);
+      if (when && !Number.isNaN(when.getTime())) {
+        const d = document.createElement("div");
+        d.className = "annDate";
+        d.textContent = when.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+        li.appendChild(d);
+      }
+
+      // Optional location
+      const loc = String(p.location || "").trim();
+      if (loc) {
+        const l = document.createElement("div");
+        l.className = "annLocation";
+        l.textContent = "📍 " + loc;
+        li.appendChild(l);
+      }
+
+      const body = document.createElement("div");
+      body.className = "annText";
+      body.textContent = text;
+      li.appendChild(body);
+
+      ul.appendChild(li);
+    }
+
+    if (!ul.children.length) return null;
+
+    wrap.appendChild(ul);
+    return wrap;
+  }
+
+  // ============================
   // Render
-  // -----------------------
+  // ============================
   function render() {
     const cards = $("cards");
     const empty = $("empty");
     const asOf = $("asOf");
     const count = $("count");
-    const birthdayLine = $("birthdayLine"); // optional (add in index.html)
+    const birthdayLine = $("birthdayLine");
 
     if (!cards || !empty || !asOf || !count) {
       console.error("Missing required DOM elements (cards, empty, asOf, count).");
       return;
     }
 
-    // stop all existing carousels before rebuild
+    // Stop carousels before rebuild
     for (const [imgEl] of carouselTimers) stopCarouselFor(imgEl);
 
-    const computed = state.data.map(computeRow);
+    const computed = (state.data || []).map(computeRow);
     const filtered = filterSort(computed);
-
     const today = todayLocal();
 
-    asOf.textContent = `As of: ${today.toLocaleDateString(undefined, {
+    asOf.textContent = "As of: " + today.toLocaleDateString(undefined, {
       weekday: "short", year: "numeric", month: "short", day: "numeric"
-    })}`;
-    count.textContent = `Shown: ${filtered.length} / ${computed.length}`;
+    });
+    count.textContent = "Shown: " + filtered.length + " / " + computed.length;
 
     // Upcoming birthdays (next 30 days)
     if (birthdayLine) {
@@ -511,15 +583,23 @@
 
       if (soon.length) {
         birthdayLine.innerHTML =
-          `📅 <strong>Upcoming birthdays (next 30 days):</strong> ` +
+          "📅 <strong>Upcoming birthdays (next 30 days):</strong> " +
           soon.map(x =>
-            `<span>${escapeHtml(x.name)} (${x.date.toLocaleDateString(undefined, { month: "short", day: "numeric" })})</span>`
+            "<span>" + escapeHtml(x.name) + " (" +
+            x.date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+            ")</span>"
           ).join(" • ");
         birthdayLine.hidden = false;
       } else {
         birthdayLine.hidden = true;
       }
     }
+
+    // Announcements block
+    const annHost = upsertAnnouncementsHost();
+    annHost.innerHTML = "";
+    const annBlock = makeAnnouncementsBlock(state.announcements);
+    if (annBlock) annHost.appendChild(annBlock);
 
     cards.innerHTML = "";
     if (filtered.length === 0) {
@@ -528,7 +608,11 @@
     }
     empty.hidden = true;
 
-    for (const r of filtered) {
+    const frag = document.createDocumentFragment();
+
+    for (let i = 0; i < filtered.length; i++) {
+      const r = filtered[i];
+
       const isMemorial = r.status === "deceased";
       const isBirthday = !!r.isBirthdayToday;
 
@@ -541,53 +625,35 @@
       }
 
       const years = (r._birth || r._passed)
-        ? `${r._birth ? r._birth.getFullYear() : "—"} – ${r._passed ? r._passed.getFullYear() : "—"}`
+        ? (r._birth ? r._birth.getFullYear() : "—") + " – " + (r._passed ? r._passed.getFullYear() : "—")
         : "";
 
       const photos = Array.isArray(r._photos) ? r._photos : [];
 
       const card = document.createElement("section");
-      card.className =
-        "card" +
-        (isMemorial ? " memorial" : "") +
-        (isBirthday ? " birthdayToday" : "");
+      card.className = "card" + (isMemorial ? " memorial" : "") + (isBirthday ? " birthdayToday" : "");
 
-      // Build header area as DOM so we can easily wire clicks
+      // Top row
       const top = document.createElement("div");
       top.className = "cardTop";
 
       const avatarWrap = document.createElement("div");
       avatarWrap.className = "avatarWrap";
-      avatarWrap.style.cursor = photos.length ? "pointer" : "default";
 
       if (photos.length) {
         const img = document.createElement("img");
         img.className = "avatar";
-        img.alt = escapeHtml(r.name || "Photo");
+        img.alt = r.name ? r.name : "Photo";
         img.loading = "lazy";
         avatarWrap.appendChild(img);
 
-        img.style.cursor = "pointer";
-        img.addEventListener("click", (e) => {
-        // Ensure this tap opens modal (not just a normal click)
-        e.preventDefault();
-        e.stopPropagation();
-        openPhotoModal(r.name || "Photos", photos, 0);
-       });
+        const dot = document.createElement("div");
+        dot.className = "avatarDot";
+        if (photos.length > 1) { dot.title = "Multiple photos"; dot.textContent = "↻"; }
+        else if (isMemorial) { dot.title = "In Memoriam"; dot.textContent = "✦"; }
+        else dot.textContent = "";
 
-        if (photos.length > 1) {
-          const dot = document.createElement("div");
-          dot.className = "avatarDot";
-          dot.title = "Multiple photos";
-          dot.textContent = "↻";
-          avatarWrap.appendChild(dot);
-        } else if (isMemorial) {
-          const dot = document.createElement("div");
-          dot.className = "avatarDot";
-          dot.title = "In Memoriam";
-          dot.textContent = "✦";
-          avatarWrap.appendChild(dot);
-        }
+        if (dot.textContent) avatarWrap.appendChild(dot);
       } else {
         const placeholder = document.createElement("div");
         placeholder.className = "avatar placeholder";
@@ -604,7 +670,8 @@
         }
       }
 
-      // Wire avatar click → modal
+      // Avatar click => full-screen modal
+      avatarWrap.style.cursor = photos.length ? "pointer" : "default";
       avatarWrap.addEventListener("click", (e) => {
         if (!photos.length) return;
         e.preventDefault();
@@ -644,110 +711,69 @@
       top.appendChild(topText);
       card.appendChild(top);
 
-      // Body rows (kept consistent with your existing structure)
+      // Rows
       const row1 = document.createElement("div");
       row1.className = "row";
-      row1.innerHTML = `<span>Birthdate</span><span class="value">${fmtDate(r._birth)}</span>`;
+      row1.innerHTML = "<span>Birthdate</span><span class='value'>" + fmtDate(r._birth) + "</span>";
       card.appendChild(row1);
 
       const row2 = document.createElement("div");
       row2.className = "row";
-      row2.innerHTML = `<span>${isMemorial ? "Age at passing" : "Current age"}</span><span class="value">${escapeHtml(r.ageText)}</span>`;
+      row2.innerHTML = "<span>" + (isMemorial ? "Age at passing" : "Current age") + "</span><span class='value'>" + escapeHtml(r.ageText) + "</span>";
       card.appendChild(row2);
 
       const row3 = document.createElement("div");
       row3.className = "row";
-      row3.innerHTML = `<span>Passed</span><span class="value">${fmtDate(r._passed)}</span>`;
+      row3.innerHTML = "<span>Passed</span><span class='value'>" + fmtDate(r._passed) + "</span>";
       card.appendChild(row3);
 
-      // Contact row (optional)
+      // Contact (optional)
       const phoneLink = (r._phoneDisplay && r._phoneHref)
-        ? `<a class="contactLink" href="${escapeHtml(r._phoneHref)}">${escapeHtml(r._phoneDisplay)}</a>`
+        ? "<a class='contactLink' href='" + escapeHtml(r._phoneHref) + "'>" + escapeHtml(r._phoneDisplay) + "</a>"
         : "";
-
       const emailLink = (r._email)
-        ? `<a class="contactLink" href="mailto:${encodeURIComponent(r._email)}">${escapeHtml(r._email)}</a>`
+        ? "<a class='contactLink' href='mailto:" + encodeURIComponent(r._email) + "'>" + escapeHtml(r._email) + "</a>"
         : "";
 
       if (phoneLink || emailLink) {
         const rowC = document.createElement("div");
         rowC.className = "row";
-        rowC.innerHTML = `
-          <span>Contact</span>
-          <span class="value contactValue">${[phoneLink, emailLink].filter(Boolean).join(" · ")}</span>
-        `;
+        rowC.innerHTML =
+          "<span>Contact</span><span class='value contactValue'>" +
+          [phoneLink, emailLink].filter(Boolean).join(" · ") +
+          "</span>";
         card.appendChild(rowC);
       }
 
-      // Tribute (optional)
-      if (isMemorial && r.tribute && r.tribute.trim()) {
+      // Tribute + would-have-turned
+      if (isMemorial && r.tribute && String(r.tribute).trim()) {
         const tribute = document.createElement("div");
         tribute.className = "tribute";
-        tribute.textContent = `“${r.tribute.trim()}”`;
+        tribute.textContent = "“" + String(r.tribute).trim() + "”";
         card.appendChild(tribute);
       }
 
-      // Would-have-turned (optional)
       if (isMemorial && r.wouldHaveTurned != null) {
         const wht = document.createElement("div");
         wht.className = "wouldHaveTurned";
         wht.innerHTML =
-          `Remembering <strong>${escapeHtml(r.name)}</strong> today — would have turned <strong>${escapeHtml(String(r.wouldHaveTurned))}</strong>.`;
+          "Remembering <strong>" + escapeHtml(r.name) + "</strong> today — would have turned <strong>" +
+          escapeHtml(String(r.wouldHaveTurned)) + "</strong>.";
         card.appendChild(wht);
       }
 
-      cards.appendChild(card);
+      frag.appendChild(card);
 
-      // Start carousel on the avatar img
       const imgEl = card.querySelector("img.avatar");
       if (imgEl && photos.length) startCarousel(imgEl, photos);
     }
+
+    cards.appendChild(frag);
   }
 
-  // -----------------------
-  // Excel date helpers (kept for compatibility; safe even if unused)
-  // -----------------------
-  function toISODateLocal(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  }
-
-  function excelDateToISO(v) {
-    if (v == null || v === "") return null;
-
-    if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
-      return toISODateLocal(v);
-    }
-
-    if (typeof v === "string") {
-      const s = v.trim();
-      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (m) {
-        const d = localDateFromYMD(m[1], m[2], m[3]);
-        return d ? toISODateLocal(d) : null;
-      }
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) {
-        return toISODateLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-      }
-      return null;
-    }
-
-    if (typeof v === "number" && isFinite(v)) {
-      const wholeDays = Math.floor(v);
-      const base = new Date(1899, 11, 30);
-      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + wholeDays);
-      return isNaN(d.getTime()) ? null : toISODateLocal(d);
-    }
-
-    return null;
-  }
-
-  // -----------------------
+  // ============================
   // UI hooks
-  // -----------------------
+  // ============================
   function hookUI() {
     const searchEl = $("search");
     const showDeceasedEl = $("showDeceased");
@@ -770,22 +796,15 @@
     if (sortBtn) {
       sortBtn.addEventListener("click", () => {
         state.sortOldestFirst = !state.sortOldestFirst;
-        sortBtn.textContent = state.sortOldestFirst ? "Sort: Oldest → Youngest" : "Sort: Youngest → Oldest";
+        sortBtn.textContent = state.sortOldestFirst
+          ? "Sort: Oldest → Youngest"
+          : "Sort: Youngest → Oldest";
         render();
-      });
-    }
-
-    // If you removed Excel upload UI, this will safely do nothing.
-    const fileInput = $("fileInput");
-    if (fileInput) {
-      fileInput.addEventListener("change", async () => {
-        alert("Excel upload is disabled in this version of the app.");
       });
     }
   }
 
   // Bootstrap
-  wirePhotoModalOnce();
   hookUI();
   render();
 })();
