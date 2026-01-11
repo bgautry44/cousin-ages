@@ -14,10 +14,20 @@
 
 <body>
   <header class="app-header">
-    <div class="container">
-      <h1>My Crazy Cousins</h1>
-      <p class="subtitle">Grandchildren of Dee & Ethyl Hicks.</p>
+    <div class="container headerRow">
+      <div class="headerText">
+        <h1>My Crazy Cousins</h1>
+        <p class="subtitle">Grandchildren of Dee & Ethyl Hicks.</p>
+      </div>
 
+      <!-- Family crest (top-right) -->
+      <div class="headerCrest" aria-hidden="true">
+        <!-- Update the filename if yours differs -->
+        <img src="assets/family-crest.png" alt="Our Family" loading="eager" />
+      </div>
+    </div>
+
+    <div class="container">
       <div class="controls">
         <input id="search" type="search" placeholder="Search by name…" autocomplete="off" />
         <label class="toggle">
@@ -29,7 +39,7 @@
         </button>
       </div>
 
-           <div class="meta">
+      <div class="meta">
         <span id="asOf"></span>
         <span id="count"></span>
       </div>
@@ -51,149 +61,149 @@
   <script>
     // Embedded default dataset (from your Excel file)
     window.COUSIN_DATA = [
-  {
-    "name": "Mary Ann Hicks",
-    "birthdate": "1946-04-22",
-    "passed": null,
-    phone: "555-123-4567",
-    email: "cousin@example.com",
-    "photo": "photos/mary_ann01.jpg"
-  },
-  {
-    "name": "Barbara Jo Hicks",
-    "birthdate": "1947-09-18",
-    "passed": "2003-09-07",
-    "photo": "photos/barbara_jo_hicks.jpg"
-  },
-  {
-    "name": "Kathy Jean Lickliter",
-    "birthdate": "1949-08-22",
-    "passed": null,
-     phone: "731-617-0824",
-     email: "cousin@example.com",
-    "photo": "photos/kathy_jean01.jpg"
-  },
-  {
-    "name": "Wanda LaRue Hicks Stanford",
-    "birthdate": "1953-08-05",
-    "passed": null,
-     phone: "731-645-9352",
-     email: "cousin@example.com",
-     "photos": [
-    "photos/wanda_hicks1.jpg",
-    "photos/wanda_hicks2.jpg",
-    "photos/wanda_hicks3.jpg",
-    "photos/wanda_hicks4.jpg"
-  ]
-  },
-  {
-    "name": "Sonia Carol Hicks",
-    "birthdate": "1957-01-24",
-    "passed": "2025-12-09",
-     "photos": [
-    "photos/sonia_hicks1.jpg",
-    "photos/sonia_hicks2.jpg",
-    "photos/sonia_hicks3.jpg"
-  ]
-  },
-  {
-    "name": "Charlotte Kay Patrick Curtis",
-    "birthdate": "1957-03-07",
-    "passed": null,
-     phone: "662-603-7540",
-     email: "cousin@example.com",
-     "photos": [
-    "photos/charlotte_patrick_curtis1.jpg",
-    "photos/charlotte_patrick_curtis2.jpg"
-  ]
-  },
-  {
-    "name": "Sharon Rose Patrick Franks",
-    "birthdate": "1958-03-17",
-    "passed": null,
-     phone: "662-808-5656",
-     email: "sharonfranks58@gmail.com",
-     "photos": [
-    "photos/sharon_rose_patrick1.jpg",
-    "photos/sharon_rose_patrick2.jpg",
-    "photos/sharon_rose_patrick3.jpg"
-  ]
-  },
-  {
-    "name": "Clifford Steve Kirk",
-    "birthdate": "1959-04-09",
-    "passed": "2017-09-23",
-     "photos": [
-    "photos/steve_kirk1.jpg",
-    "photos/steve_kirk2.jpg"
-  ]
-  },
-  {
-    "name": "Barry Gene Autry",
-    "birthdate": "1960-02-14",
-    "passed": null,
-     phone: "931-272-1041",
-     email: "bgautry44@gmail.com",
-    "photos": [
-    "photos/barry_gene_autry1.jpg",
-    "photos/barry_gene_autry2.jpg",
-    "photos/barry_gene_autry3.jpg",
-    "photos/barry_gene_autry4.jpg",
-    "photos/barry_gene_autry5.JPG"
-  ]
-  },
- {
-  "name": "Stanley Houston Hicks",
-  "birthdate": "1961-01-23",
-  "passed": "2025-12-23",
-  "photos": [
-    "photos/stanley_houston_hicks1.jpg",
-    "photos/stanley_houston_hicks2.jpg",
-    "photos/stanley_houston_hicks3.jpg",
-    "photos/stanley_houston_hicks4.jpg",
-    "photos/stanley_houston_hicks5.jpg"
-  ]
-   },
-  {
-    "name": "Bubba (Bret) Vaughn Autry",
-    "birthdate": "1961-05-22",
-    "passed": null,
-     phone: "731-415-3071",
-     email: "cousin@example.com",
-     "photos": [
-    "photos/bubba_autry1.jpg",
-    "photos/bubba_autry2.jpg",
-    "photos/bubba_autry3.jpg",
-    "photos/bubba_autry4.jpg",
-    "photos/bubba_autry5.jpg",
-    "photos/bubba_autry6.jpg"
-  ]
-  },
-  {
-    "name": "Kenneth Harold Patrick",
-    "birthdate": "1961-12-18",
-    "passed": null,
-     phone: "662-808-5367",
-     email: "kenneth.patrick.pe@gmail.com",
-     "photos": [
-    "photos/kenneth_patrick1.jpg",
-    "photos/kenneth_patrick2.jpg",
-    "photos/kenneth_patrick3.jpg"
-  ]
-  },
-  {
-    "name": "Timothy Wayne Taylor",
-    "birthdate": "1964-05-19",
-    "passed": null,
-     phone: "731-244-1010",
-     email: "cousin@example.com",
-    "photos": [
-    "photos/timothy_wayne_taylor1.jpg",
-    "photos/timothy_wayne_taylor2.jpg",
-    "photos/timothy_wayne_taylor3.jpg"
-  ]
-  }
-];
+      {
+        "name": "Mary Ann Hicks",
+        "birthdate": "1946-04-22",
+        "passed": null,
+        "phone": "555-123-4567",
+        "email": "cousin@example.com",
+        "photo": "photos/mary_ann01.jpg"
+      },
+      {
+        "name": "Barbara Jo Hicks",
+        "birthdate": "1947-09-18",
+        "passed": "2003-09-07",
+        "photo": "photos/barbara_jo_hicks.jpg"
+      },
+      {
+        "name": "Kathy Jean Lickliter",
+        "birthdate": "1949-08-22",
+        "passed": null,
+        "phone": "731-617-0824",
+        "email": "cousin@example.com",
+        "photo": "photos/kathy_jean01.jpg"
+      },
+      {
+        "name": "Wanda LaRue Hicks Stanford",
+        "birthdate": "1953-08-05",
+        "passed": null,
+        "phone": "731-645-9352",
+        "email": "cousin@example.com",
+        "photos": [
+          "photos/wanda_hicks1.jpg",
+          "photos/wanda_hicks2.jpg",
+          "photos/wanda_hicks3.jpg",
+          "photos/wanda_hicks4.jpg"
+        ]
+      },
+      {
+        "name": "Sonia Carol Hicks",
+        "birthdate": "1957-01-24",
+        "passed": "2025-12-09",
+        "photos": [
+          "photos/sonia_hicks1.jpg",
+          "photos/sonia_hicks2.jpg",
+          "photos/sonia_hicks3.jpg"
+        ]
+      },
+      {
+        "name": "Charlotte Kay Patrick Curtis",
+        "birthdate": "1957-03-07",
+        "passed": null,
+        "phone": "662-603-7540",
+        "email": "cousin@example.com",
+        "photos": [
+          "photos/charlotte_patrick_curtis1.jpg",
+          "photos/charlotte_patrick_curtis2.jpg"
+        ]
+      },
+      {
+        "name": "Sharon Rose Patrick Franks",
+        "birthdate": "1958-03-17",
+        "passed": null,
+        "phone": "662-808-5656",
+        "email": "sharonfranks58@gmail.com",
+        "photos": [
+          "photos/sharon_rose_patrick1.jpg",
+          "photos/sharon_rose_patrick2.jpg",
+          "photos/sharon_rose_patrick3.jpg"
+        ]
+      },
+      {
+        "name": "Clifford Steve Kirk",
+        "birthdate": "1959-04-09",
+        "passed": "2017-09-23",
+        "photos": [
+          "photos/steve_kirk1.jpg",
+          "photos/steve_kirk2.jpg"
+        ]
+      },
+      {
+        "name": "Barry Gene Autry",
+        "birthdate": "1960-02-14",
+        "passed": null,
+        "phone": "931-272-1041",
+        "email": "bgautry44@gmail.com",
+        "photos": [
+          "photos/barry_gene_autry1.jpg",
+          "photos/barry_gene_autry2.jpg",
+          "photos/barry_gene_autry3.jpg",
+          "photos/barry_gene_autry4.jpg",
+          "photos/barry_gene_autry5.JPG"
+        ]
+      },
+      {
+        "name": "Stanley Houston Hicks",
+        "birthdate": "1961-01-23",
+        "passed": "2025-12-23",
+        "photos": [
+          "photos/stanley_houston_hicks1.jpg",
+          "photos/stanley_houston_hicks2.jpg",
+          "photos/stanley_houston_hicks3.jpg",
+          "photos/stanley_houston_hicks4.jpg",
+          "photos/stanley_houston_hicks5.jpg"
+        ]
+      },
+      {
+        "name": "Bubba (Bret) Vaughn Autry",
+        "birthdate": "1961-05-22",
+        "passed": null,
+        "phone": "731-415-3071",
+        "email": "cousin@example.com",
+        "photos": [
+          "photos/bubba_autry1.jpg",
+          "photos/bubba_autry2.jpg",
+          "photos/bubba_autry3.jpg",
+          "photos/bubba_autry4.jpg",
+          "photos/bubba_autry5.jpg",
+          "photos/bubba_autry6.jpg"
+        ]
+      },
+      {
+        "name": "Kenneth Harold Patrick",
+        "birthdate": "1961-12-18",
+        "passed": null,
+        "phone": "662-808-5367",
+        "email": "kenneth.patrick.pe@gmail.com",
+        "photos": [
+          "photos/kenneth_patrick1.jpg",
+          "photos/kenneth_patrick2.jpg",
+          "photos/kenneth_patrick3.jpg"
+        ]
+      },
+      {
+        "name": "Timothy Wayne Taylor",
+        "birthdate": "1964-05-19",
+        "passed": null,
+        "phone": "731-244-1010",
+        "email": "cousin@example.com",
+        "photos": [
+          "photos/timothy_wayne_taylor1.jpg",
+          "photos/timothy_wayne_taylor2.jpg",
+          "photos/timothy_wayne_taylor3.jpg"
+        ]
+      }
+    ];
   </script>
 
   <!-- Optional Excel upload support (SheetJS) -->
