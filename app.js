@@ -3,6 +3,7 @@
 
   const state = {
     data: Array.isArray(window.COUSIN_DATA) ? window.COUSIN_DATA : [],
+    announcements: [],
     showDeceased: true,
     sortOldestFirst: true,
     q: ""
@@ -89,6 +90,11 @@
     return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
 
+  function fmtFullDate(d) {
+    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  }
+
   function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (s) => ({
       "&": "&amp;",
@@ -100,7 +106,7 @@
   }
 
   // -----------------------
-  // Contact helpers (NEW)
+  // Contact helpers
   // -----------------------
   function normalizeEmail(raw) {
     const s = String(raw || "").trim();
@@ -130,6 +136,140 @@
   }
 
   // -----------------------
+  // Announcements (GLOBAL)
+  // -----------------------
+  function normalizeAnnouncements(v, maxItems = 10) {
+    const arr = Array.isArray(v) ? v : [];
+    const out = [];
+
+    for (const item of arr) {
+      if (!item || typeof item !== "object") continue;
+
+      const text = String(item.text ?? item.message ?? "").replace(/\s+/g, " ").trim();
+      if (!text) continue;
+
+      const dateObj = parseISODate(item.date);
+      const location = String(item.location ?? "").replace(/\s+/g, " ").trim();
+      const pinned = !!item.pinned;
+
+      out.push({
+        text,
+        date: dateObj || null,
+        dateRaw: item.date || "",
+        location,
+        pinned
+      });
+
+      if (out.length >= maxItems) break;
+    }
+
+    // Sort: pinned first, then newest date first (if present), then text
+    out.sort((a, b) => {
+      const ap = a.pinned ? 1 : 0;
+      const bp = b.pinned ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+
+      const at = a.date instanceof Date ? a.date.getTime() : NaN;
+      const bt = b.date instanceof Date ? b.date.getTime() : NaN;
+
+      const aValid = Number.isFinite(at);
+      const bValid = Number.isFinite(bt);
+
+      if (aValid && bValid && at !== bt) return bt - at; // newest first
+      if (aValid && !bValid) return -1;
+      if (!aValid && bValid) return 1;
+
+      return a.text.localeCompare(b.text);
+    });
+
+    return out;
+  }
+
+  async function loadAnnouncementsOnce() {
+    // GitHub Pages-safe. File path is relative to index.html.
+    // If you put announcements.json in a folder, update the path here.
+    const url = "announcements.json";
+
+    try {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      state.announcements = normalizeAnnouncements(json, 10);
+    } catch (e) {
+      console.warn("Announcements load failed:", e?.message || e);
+      state.announcements = [];
+    }
+  }
+
+  function upsertAnnouncementsHost(cardsEl) {
+    let host = $("announcements");
+    if (!host) {
+      host = document.createElement("div");
+      host.id = "announcements";
+
+      // Insert above the cards container
+      const parent = cardsEl.parentNode;
+      parent.insertBefore(host, cardsEl);
+    }
+    return host;
+  }
+
+  function makeAnnouncementsBlock(posts) {
+    const list = Array.isArray(posts) ? posts : [];
+    if (!list.length) return null;
+
+    const wrap = document.createElement("section");
+    wrap.className = "annPanel";
+
+    const title = document.createElement("div");
+    title.className = "annTitle";
+    title.textContent = "Announcements";
+    wrap.appendChild(title);
+
+    const ul = document.createElement("ul");
+    ul.className = "annList";
+
+    for (const p of list) {
+      const li = document.createElement("li");
+      li.className = "annItem";
+
+      if (p.pinned) {
+        const pin = document.createElement("div");
+        pin.className = "annPinned";
+        pin.textContent = "Pinned";
+        li.appendChild(pin);
+      }
+
+      if (p.date instanceof Date && !Number.isNaN(p.date.getTime())) {
+        const d = document.createElement("div");
+        d.className = "annDate";
+        d.textContent = fmtFullDate(p.date);
+        li.appendChild(d);
+      }
+
+      const body = document.createElement("div");
+      body.className = "annText";
+      body.textContent = p.text;
+      li.appendChild(body);
+
+      const loc = String(p.location || "").trim();
+      if (loc) {
+        const l = document.createElement("div");
+        l.className = "annLocation";
+        l.textContent = `Location: ${loc}`;
+        li.appendChild(l);
+      }
+
+      ul.appendChild(li);
+    }
+
+    if (!ul.children.length) return null;
+
+    wrap.appendChild(ul);
+    return wrap;
+  }
+
+  // -----------------------
   // Data computation
   // -----------------------
   function computeRow(r) {
@@ -142,18 +282,14 @@
     const ref = passedEffective ?? today;
     const ageObj = birth ? diffYMD(birth, ref) : null;
 
-    // Living only: "Birthday Today"
     const isBirthdayToday = !!(birth && !passedEffective && sameMonthDay(birth, today));
 
-    // Deceased only: "Remembering [Name] today — would have turned X."
     const wouldHaveTurned = (birth && passedEffective && sameMonthDay(birth, today))
       ? (today.getFullYear() - birth.getFullYear())
       : null;
 
-    // Used for upcoming birthdays line (filtered to living in render)
     const nextBirthday = birth ? nextBirthdayDate(birth, today) : null;
 
-    // Contact (optional)
     const phoneRaw = (r?.phone ?? "").toString().trim();
     const emailClean = normalizeEmail(r?.email);
 
@@ -184,7 +320,6 @@
     const q = normalize(state.q);
     if (q) out = out.filter(r => normalize(r.name).includes(q));
 
-    // Sort by DOB only (birth order)
     out = out.slice().sort((a, b) => {
       const aT = a._birth ? a._birth.getTime() : Number.POSITIVE_INFINITY;
       const bT = b._birth ? b._birth.getTime() : Number.POSITIVE_INFINITY;
@@ -215,12 +350,11 @@
 
     const setSrc = () => {
       imgEl.classList.remove("fadeIn");
-      void imgEl.offsetWidth; // restart animation
+      void imgEl.offsetWidth;
       imgEl.src = photos[idx];
       imgEl.classList.add("fadeIn");
     };
 
-    // Skip broken images (prevents getting "stuck" on a missing file)
     imgEl.onerror = () => {
       if (photos.length <= 1) return;
       idx = (idx + 1) % photos.length;
@@ -229,7 +363,6 @@
 
     setSrc();
 
-    // If only one photo, no rotation needed
     if (photos.length === 1) return;
 
     const tickMs = 2600;
@@ -240,7 +373,6 @@
 
     carouselTimers.set(imgEl, timer);
 
-    // Tap to advance
     imgEl.onclick = () => {
       idx = (idx + 1) % photos.length;
       setSrc();
@@ -255,19 +387,18 @@
     const empty = $("empty");
     const asOf = $("asOf");
     const count = $("count");
-    const birthdayLine = $("birthdayLine"); // optional (add in index.html)
+    const birthdayLine = $("birthdayLine");
 
     if (!cards || !empty || !asOf || !count) {
       console.error("Missing required DOM elements (cards, empty, asOf, count).");
       return;
     }
 
-    // stop all existing carousels before rebuild
+    // stop carousels
     for (const [imgEl] of carouselTimers) stopCarouselFor(imgEl);
 
     const computed = state.data.map(computeRow);
     const filtered = filterSort(computed);
-
     const today = todayLocal();
 
     asOf.textContent = `As of: ${today.toLocaleDateString(undefined, {
@@ -275,7 +406,7 @@
     })}`;
     count.textContent = `Shown: ${filtered.length} / ${computed.length}`;
 
-    // Upcoming birthdays (next 30 days)
+    // Upcoming birthdays line
     if (birthdayLine) {
       const soon = computed
         .filter(r => r.status === "alive" && r._birth && r.nextBirthday)
@@ -298,6 +429,13 @@
       }
     }
 
+    // --- Announcements (global) ---
+    const annHost = upsertAnnouncementsHost(cards);
+    annHost.innerHTML = "";
+    const annBlock = makeAnnouncementsBlock(state.announcements);
+    if (annBlock) annHost.appendChild(annBlock);
+
+    // cards
     cards.innerHTML = "";
     if (filtered.length === 0) {
       empty.hidden = false;
@@ -363,7 +501,6 @@
           ? `<div class="wouldHaveTurned">Remembering <strong>${escapeHtml(r.name)}</strong> today — would have turned <strong>${r.wouldHaveTurned}</strong>.</div>`
           : "";
 
-      // Contact block (NEW)
       const phoneLink = (r._phoneDisplay && r._phoneHref)
         ? `<a class="contactLink" href="${escapeHtml(r._phoneHref)}">${escapeHtml(r._phoneDisplay)}</a>`
         : "";
@@ -409,47 +546,6 @@
   }
 
   // -----------------------
-  // Excel date helpers (kept for compatibility; safe even if unused)
-  // -----------------------
-  function toISODateLocal(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  }
-
-  function excelDateToISO(v) {
-    if (v == null || v === "") return null;
-
-    if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
-      return toISODateLocal(v);
-    }
-
-    if (typeof v === "string") {
-      const s = v.trim();
-      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (m) {
-        const d = localDateFromYMD(m[1], m[2], m[3]);
-        return d ? toISODateLocal(d) : null;
-      }
-      const d = new Date(s);
-      if (!isNaN(d.getTime())) {
-        return toISODateLocal(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
-      }
-      return null;
-    }
-
-    if (typeof v === "number" && isFinite(v)) {
-      const wholeDays = Math.floor(v);
-      const base = new Date(1899, 11, 30);
-      const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + wholeDays);
-      return isNaN(d.getTime()) ? null : toISODateLocal(d);
-    }
-
-    return null;
-  }
-
-  // -----------------------
   // UI hooks
   // -----------------------
   function hookUI() {
@@ -478,16 +574,14 @@
         render();
       });
     }
-
-    // If you removed Excel upload UI, this will safely do nothing.
-    const fileInput = $("fileInput");
-    if (fileInput) {
-      fileInput.addEventListener("change", async () => {
-        alert("Excel upload is disabled in this version of the app.");
-      });
-    }
   }
 
-  hookUI();
-  render();
+  // -----------------------
+  // Bootstrap
+  // -----------------------
+  (async function bootstrap() {
+    hookUI();
+    await loadAnnouncementsOnce();
+    render();
+  })();
 })();
