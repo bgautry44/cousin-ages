@@ -712,12 +712,6 @@ function makeAnnouncementsBlock(posts) {
       }
     }
 
-    // Announcements block
-    const annHost = upsertAnnouncementsHost();
-    annHost.innerHTML = "";
-    const annBlock = makeAnnouncementsBlock(state.announcements);
-    if (annBlock) annHost.appendChild(annBlock);
-
     cards.innerHTML = "";
     if (filtered.length === 0) {
       empty.hidden = false;
