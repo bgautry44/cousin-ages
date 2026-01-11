@@ -567,6 +567,14 @@
         img.loading = "lazy";
         avatarWrap.appendChild(img);
 
+        img.style.cursor = "pointer";
+        img.addEventListener("click", (e) => {
+        // Ensure this tap opens modal (not just a normal click)
+        e.preventDefault();
+        e.stopPropagation();
+        openPhotoModal(r.name || "Photos", photos, 0);
+       });
+
         if (photos.length > 1) {
           const dot = document.createElement("div");
           dot.className = "avatarDot";
