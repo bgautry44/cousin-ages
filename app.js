@@ -673,6 +673,15 @@ function makeAnnouncementsBlock(posts) {
     const filtered = filterSort(computed);
     const today = todayLocal();
 
+    // --- Global Announcements (Cousins App, GitHub-only) ---
+    const posts = normalizeAnnouncements(window.COUSIN_ANNOUNCEMENTS, 10);
+
+    const annHost = upsertAnnouncementsHost(cards);
+    annHost.innerHTML = "";
+
+    const annBlock = makeAnnouncementsBlock(posts);
+    if (annBlock) annHost.appendChild(annBlock);
+
     asOf.textContent = "As of: " + today.toLocaleDateString(undefined, {
       weekday: "short", year: "numeric", month: "short", day: "numeric"
     });
