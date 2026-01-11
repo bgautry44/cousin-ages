@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>My Crazy Cousins</title>
-  <meta name="apple-mobile-web-app-title" content="My Crazy Cousins">
+  <meta name="apple-mobile-web-app-title" content="My Crazy Cousins" />
   <link rel="stylesheet" href="styles.css" />
 
   <!-- Home screen / tab icons -->
-  <link rel="apple-touch-icon" href="icon.png">
-  <link rel="icon" href="icon.png">
+  <link rel="apple-touch-icon" href="icon.png" />
+  <link rel="icon" href="icon.png" />
 </head>
 
 <body>
@@ -17,23 +17,24 @@
     <div class="container headerRow">
       <div class="headerText">
         <h1>My Crazy Cousins</h1>
-        <p class="subtitle">Grandchildren of Dee & Ethyl Hicks.</p>
+        <p class="subtitle">Grandchildren of Dee &amp; Ethyl Hicks.</p>
       </div>
 
       <!-- Family crest (top-right) -->
       <div class="headerCrest" aria-hidden="true">
-        <!-- Update the filename if yours differs -->
         <img src="assets/family-crest3.png" alt="Our Family" loading="eager" />
       </div>
     </div>
 
     <div class="container">
-      <div class="controls">
+      <div class="controls" id="appControls">
         <input id="search" type="search" placeholder="Search by name…" autocomplete="off" />
-        <label class="toggle">
+
+        <label class="toggle" title="Show deceased">
           <input id="showDeceased" type="checkbox" checked />
           <span>Show deceased</span>
         </label>
+
         <button id="sortBtn" type="button" aria-label="Sort">
           Sort: Oldest → Youngest
         </button>
@@ -43,11 +44,15 @@
         <span id="asOf"></span>
         <span id="count"></span>
       </div>
+
       <div id="birthdayLine" class="birthdayLine" hidden></div>
     </div>
   </header>
 
   <main class="container">
+    <!-- If you're adding global announcements later, we can place them here -->
+    <div id="announcements"></div>
+
     <div id="cards" class="cards"></div>
     <p id="empty" class="empty" hidden>No matches.</p>
   </main>
@@ -57,31 +62,6 @@
       Tip: Add this page to your home screen for an “app-like” experience.
     </p>
   </footer>
-
-  <!-- ============================
-       PHOTO MODAL / LIGHTBOX (NEW)
-       ============================ -->
-  <div id="photoModal" class="modal" hidden aria-hidden="true">
-    <div class="modal__backdrop" aria-hidden="true"></div>
-
-    <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="photoModalTitle">
-      <div class="modal__header">
-        <div id="photoModalTitle" class="modal__title">Photos</div>
-        <button id="photoModalClose" class="modal__close" type="button" aria-label="Close">Close</button>
-      </div>
-
-      <div class="modal__body">
-        <button id="photoPrev" class="modal__nav" type="button" aria-label="Previous photo">‹</button>
-
-        <div class="modal__stage">
-          <img id="photoModalImg" class="modal__img" alt="Photo" />
-          <div id="photoModalCounter" class="modal__counter"></div>
-        </div>
-
-        <button id="photoNext" class="modal__nav" type="button" aria-label="Next photo">›</button>
-      </div>
-    </div>
-  </div>
 
   <script>
     // Embedded default dataset (from your Excel file)
@@ -232,8 +212,9 @@
   </script>
 
   <!-- Optional Excel upload support (SheetJS) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha256-2K7a9ldnLAvKx9aS+2zV7kwn+P1m3u+Jc9iZ2zqF3F0=" crossorigin="anonymous"></script>
-  <script src="app.js?v=20260111a"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
 
+  <!-- IMPORTANT: bump this value whenever you change app.js to avoid cached old code -->
+  <script src="app.js?v=20260111b"></script>
 </body>
 </html>
