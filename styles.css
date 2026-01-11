@@ -16,6 +16,10 @@ body{
   background:linear-gradient(180deg, #070a0f 0%, #0b0f14 40%, #0b0f14 100%);
   color:var(--text);
 }
+
+/* Defensive: prevent any image from blowing up layout */
+img{ max-width:100%; height:auto; display:block; }
+
 .container{
   width:min(980px, 92vw);
   margin:0 auto;
@@ -39,6 +43,71 @@ h1{
   color:var(--muted);
   font-size:13px;
 }
+
+/* ============================
+   Header crest (HARD-CONTAINED)
+   ============================ */
+.headerRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+}
+
+.headerText{
+  flex: 1 1 auto;
+  min-width:0;
+}
+
+/* Fixed, hard-clamped box */
+.headerCrest{
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  margin-top: 12px;
+
+  /* HARD containment */
+  overflow: hidden;
+  border-radius: 14px;
+
+  /* Visual style */
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(14,20,34,.55);
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* Hard clamp the image itself */
+.headerCrest img{
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+
+  object-fit: contain !important;     /* never overflow; letterbox if needed */
+  object-position: center center !important;
+
+  display:block !important;
+  margin:0 !important;
+  padding: 6px;                        /* keeps “badge” feel; reduce if you prefer */
+}
+
+/* Mobile: smaller crest box */
+@media (max-width: 520px){
+  .headerCrest{
+    width: 52px;
+    height: 52px;
+    margin-top: 10px;
+    border-radius: 12px;
+  }
+  .headerCrest img{
+    padding: 5px;
+  }
+}
+
 .controls{
   display:flex;
   gap:10px;
@@ -120,14 +189,14 @@ h1{
 }
 
 /* ============================
-   Contact links (NEW)
+   Contact links
    ============================ */
 .contactValue{
   display:flex;
   justify-content:flex-end;
   gap:8px;
-  flex-wrap:wrap;            /* prevents overflow on small screens */
-  max-width: 66%;            /* keeps label side readable */
+  flex-wrap:wrap;
+  max-width: 66%;
 }
 
 .contactLink{
@@ -154,7 +223,6 @@ h1{
   transform: translateY(1px);
 }
 
-/* Optional: slightly smaller chips on very narrow screens */
 @media (max-width: 360px){
   .contactLink{
     padding:5px 8px;
