@@ -18,7 +18,6 @@ body{
   color:var(--text);
 }
 
-/* Defensive: keep any image from exploding layout anywhere */
 img{ max-width:100%; height:auto; display:block; }
 
 .container{
@@ -48,82 +47,55 @@ h1{
   font-size:13px;
 }
 
-/* ============================
-   Header crest (HARD CONTAINED)
-   ============================ */
+/* Header row with crest */
 .headerRow{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
-  gap:14px;
+  gap:12px;
 }
 
 .headerText{
-  flex: 1 1 auto;
+  flex:1 1 auto;
   min-width:0;
 }
 
-/* Fixed-size box; overflow hidden = cannot escape */
 .headerCrest{
-  flex: 0 0 auto !important;
-  width: 64px !important;
-  height: 64px !important;
-  margin-top: 12px !important;
+  flex:0 0 auto;
+  display:flex;
+  align-items:flex-start;
+  justify-content:flex-end;
+  padding-top: 14px;
+}
 
-  overflow: hidden !important;
-  border-radius: 14px !important;
-
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(14,20,34,.55);
+.crestImg{
+  width:56px;
+  height:56px;
+  border-radius:14px;
+  object-fit:contain;
+  border:1px solid rgba(255,255,255,0.14);
+  background:#0e1422;
   box-shadow: 0 10px 24px rgba(0,0,0,.18);
-
-  display:flex !important;
-  align-items:center !important;
-  justify-content:center !important;
 }
 
-/* Force the image to live inside the box */
-.headerCrest img{
-  width: 100% !important;
-  height: 100% !important;
-  max-width: 100% !important;
-  max-height: 100% !important;
-
-  object-fit: contain !important;
-  object-position: center center !important;
-
-  display:block !important;
-  margin: 0 !important;
-
-  /* Internal padding so it looks like a badge, not edge-to-edge */
-  padding: 6px !important;
+@media (min-width: 900px){
+  .crestImg{ width:72px; height:72px; border-radius:16px; }
 }
 
-/* Mobile: reduce crest size */
-@media (max-width: 520px){
-  .headerCrest{
-    width: 52px !important;
-    height: 52px !important;
-    margin-top: 10px !important;
-    border-radius: 12px !important;
-  }
-  .headerCrest img{
-    padding: 5px !important;
-  }
+@media (max-width: 380px){
+  .crestImg{ width:48px; height:48px; border-radius:12px; }
 }
 
-/* ============================
-   Controls
-   ============================ */
+/* Controls */
 .controls{
   display:flex;
+  align-items:center;
   gap:10px;
   flex-wrap:wrap;
-  align-items:center;
   padding-bottom:10px;
 }
 
-#search{
+.controls input{
   flex:1 1 220px;
   min-width:160px;
   padding:10px 12px;
@@ -133,30 +105,41 @@ h1{
   color:var(--text);
   outline:none;
 }
-#search::placeholder{ color:#7f93ad; }
 
-.toggle{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  padding:8px 10px;
-  border:1px solid var(--border);
-  border-radius:12px;
-  background:#0e1422;
-  color:var(--muted);
-  font-size:13px;
-}
+.controls input::placeholder{ color:#7f93ad; }
 
-#sortBtn{
+.controls button{
   padding:10px 12px;
   border:1px solid var(--border);
   border-radius:12px;
   background:#0e1422;
   color:var(--text);
   font-size:13px;
+  cursor:pointer;
 }
-#sortBtn:active{ transform:translateY(1px); }
 
+.controls button:active{ transform:translateY(1px); }
+
+/* Toggle (checkbox + text tight) */
+label.toggle{
+  display:inline-flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:6px;
+  width:max-content;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+
+label.toggle input[type="checkbox"]{
+  margin:0;
+}
+
+label.toggle span{
+  margin:0;
+}
+
+/* Meta line */
 .meta{
   display:flex;
   gap:14px;
@@ -166,49 +149,16 @@ h1{
   font-size:12px;
 }
 
-/* ============================
-   Cards
-   ============================ */
-.cards{
-  display:grid;
-  grid-template-columns: repeat( auto-fit, minmax(240px, 1fr) );
-  gap:12px;
-  padding:14px 0 18px;
-}
-
-.card{
-  border:1px solid var(--border);
-  border-radius:16px;
-  background:linear-gradient(180deg, rgba(18,24,38,.9), rgba(18,24,38,.6));
-  padding:14px 14px 12px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.20);
-}
-
-.name{
-  font-weight:700;
-  margin:0 0 8px;
-  font-size:16px;
-  line-height:1.2;
-}
-
-.row{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
+.birthdayLine{
+  margin:6px 0 10px;
   font-size:13px;
   color:var(--muted);
-  margin:6px 0;
 }
 
-.value{
-  color:var(--text);
-  font-weight:600;
-  text-align:right;
-}
+.birthdayLine strong{ color:var(--text); font-weight:600; }
+.birthdayLine span{ white-space:nowrap; }
 
-  /* ============================
-   Global Announcements panel
-   ============================ */
+/* Announcements */
 .annPanel{
   margin: 12px 0 14px;
   padding: 12px 12px;
@@ -218,7 +168,7 @@ h1{
 }
 
 .annTitle{
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 8px;
 }
 
@@ -235,16 +185,12 @@ h1{
   border-radius: 10px;
   background: rgba(0,0,0,0.18);
   border: 1px solid rgba(255,255,255,0.06);
+  position: relative;
 }
 
-.annPinned{
-  display: inline-block;
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  opacity: 0.85;
-  margin-bottom: 6px;
+.annHeadline{
+  font-weight: 700;
+  margin-bottom: 4px;
 }
 
 .annDate{
@@ -253,87 +199,66 @@ h1{
   margin-bottom: 4px;
 }
 
+.annLocation{
+  margin-bottom: 6px;
+  font-size: 0.90rem;
+  opacity: 0.85;
+}
+
 .annText{
   font-size: 0.95rem;
   line-height: 1.3;
 }
 
-.annLocation{
-  margin-top: 4px;
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
-
-/* ============================
-   Contact links
-   ============================ */
-.contactValue{
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-  flex-wrap:wrap;
-  max-width: 66%;
-}
-
-.contactLink{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,0.14);
-  background: rgba(14,20,34,.65);
-  color: var(--text);
-  text-decoration:none;
-  font-weight:600;
-  line-height:1;
-  white-space:nowrap;
-}
-
-.contactLink:hover{
-  border-color: rgba(255,122,26,.45);
-  box-shadow: 0 0 0 1px rgba(255,122,26,.18);
-}
-
-.contactLink:active{ transform: translateY(1px); }
-
-@media (max-width: 360px){
-  .contactLink{ padding:5px 8px; font-size:12px; }
-  .contactValue{ max-width: 62%; }
-}
-
-.badge{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
+.annPinned{
+  position:absolute;
+  top:10px;
+  right:10px;
   font-size:12px;
-  padding:6px 10px;
+  padding:4px 8px;
   border-radius:999px;
+  border:1px solid rgba(255,122,26,0.35);
+  color: rgba(255,122,26,0.95);
+  background: rgba(255,122,26,0.08);
+}
+
+/* Cards grid */
+.cards{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap:12px;
+  padding:14px 0 18px;
+}
+
+.card{
   border:1px solid var(--border);
-  margin-top:10px;
-  color:var(--muted);
-}
-.badge.alive{ border-color:rgba(56,211,159,.35); color:rgba(56,211,159,.95); }
-.badge.deceased{ border-color:rgba(255,92,122,.35); color:rgba(255,92,122,.95); }
-
-.empty{
-  color:var(--muted);
-  text-align:center;
-  padding:28px 0;
+  border-radius:16px;
+  background:linear-gradient(180deg, rgba(18,24,38,.9), rgba(18,24,38,.6));
+  padding:14px 14px 12px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.20);
 }
 
-.footer{
-  border-top:1px solid var(--border);
-  padding:16px 0 24px;
-}
-
-/* --- Photo / avatar support --- */
 .cardTop{
   display:flex;
   gap:12px;
-  align-items:center;
+  align-items:flex-start;
   margin:0 0 10px;
+}
+
+.avatarWrap{
+  position:relative;
+  width:56px;
+  height:56px;
+  flex:0 0 auto;
+}
+
+.avatar{
+  width:56px !important;
+  height:56px !important;
+  border-radius:999px !important;
+  object-fit:cover !important;
+  border:1px solid rgba(255,255,255,0.14);
+  background:#0e1422;
 }
 
 .avatar.placeholder{
@@ -342,6 +267,24 @@ h1{
   justify-content:center;
   color:#7f93ad;
   font-size:12px;
+  border:1px solid rgba(255,255,255,0.14);
+  background:#0e1422;
+}
+
+.avatarDot{
+  position:absolute;
+  right:-2px;
+  bottom:-2px;
+  width:14px;
+  height:14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.16);
+  background: rgba(10,14,20,.95);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:10px;
+  color: rgba(255,122,26,.95);
 }
 
 .cardTopText{
@@ -349,18 +292,65 @@ h1{
   min-width:0;
 }
 
-.cardTop .name{
+.name{
+  font-weight:700;
   margin:0 0 6px;
+  font-size:16px;
+  line-height:1.2;
 }
 
-.cardTopText .badge{
-  margin-top:0;
+/* Badge */
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  color:var(--muted);
 }
 
-/* --- Memorial + Photo Carousel --- */
+.badge.alive{ border-color:rgba(56,211,159,.35); color:rgba(56,211,159,.95); }
+.badge.deceased{ border-color:rgba(255,92,122,.35); color:rgba(255,92,122,.95); }
+.badge.birthday{ border-color: rgba(255,122,26,.6); color: rgba(255,122,26,1); font-weight:700; }
+
+/* Rows */
+.row{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  font-size:13px;
+  color:var(--muted);
+  margin:6px 0;
+}
+
+.value{
+  color:var(--text);
+  font-weight:600;
+  text-align:right;
+}
+
+.contactLink{
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  padding-bottom: 1px;
+}
+
+.contactLink:hover{
+  border-bottom-color: rgba(255,255,255,0.35);
+}
+
+/* Memorial */
 .card.memorial{
   border-color: rgba(255,122,26,.35);
   box-shadow: 0 10px 24px rgba(0,0,0,.25);
+}
+
+.card.memorial .avatar{
+  filter: grayscale(0.55) contrast(1.05);
 }
 
 .memorialMark{
@@ -388,52 +378,32 @@ h1{
   padding-top: 10px;
 }
 
-.avatarWrap{
-  position:relative;
-  width:56px;
-  height:56px;
-  flex: 0 0 auto;
+.wouldHaveTurned{
+  margin-top:8px;
+  font-size:13px;
+  color:var(--muted);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top:8px;
 }
 
-.avatar{
-  width:56px;
-  height:56px;
-  border-radius:999px;
-  object-fit:cover;
-  border:1px solid rgba(255,255,255,0.14);
-  background:#0e1422;
-  display:block;
+.wouldHaveTurned strong{ color: var(--text); font-weight: 600; }
+
+.empty{
+  color:var(--muted);
+  text-align:center;
+  padding:28px 0;
 }
 
-.card.memorial .avatar{
-  filter: grayscale(0.55) contrast(1.05);
+/* Fade for carousel/modal */
+.fadeIn{
+  animation: fadeInQuick .22s ease-out;
 }
-
-.avatarDot{
-  position:absolute;
-  right:-2px;
-  bottom:-2px;
-  width:14px;
-  height:14px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,0.16);
-  background: rgba(10,14,20,.95);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:10px;
-  color: rgba(255,122,26,.95);
-}
-
-.fadeIn{ animation: fadeInQuick .22s ease-out; }
 @keyframes fadeInQuick{
   from { opacity: .25; }
   to   { opacity: 1; }
 }
 
-  /* ============================
-   Photo Modal / Lightbox
-============================ */
+/* Modal */
 .modal[hidden]{ display:none; }
 
 .modal{
@@ -559,44 +529,4 @@ h1{
     height: calc(94vh - 120px);
     min-height: 300px;
   }
-}
-
-/* --- Birthday awareness --- */
-.card.birthdayToday{
-  border-color: rgba(255,122,26,.6);
-  box-shadow: 0 0 0 1px rgba(255,122,26,.35), 0 10px 24px rgba(0,0,0,.25);
-}
-
-.wouldHaveTurned{
-  margin-top:8px;
-  font-size:13px;
-  color:var(--muted);
-  border-top: 1px solid rgba(255,255,255,0.08);
-  padding-top:8px;
-}
-
-.wouldHaveTurned strong{
-  color: var(--text);
-  font-weight: 600;
-}
-
-.badge.birthday{
-  border-color: rgba(255,122,26,.6);
-  color: rgba(255,122,26,1);
-  font-weight:700;
-}
-
-.birthdayLine{
-  margin:6px 0 10px;
-  font-size:13px;
-  color:var(--muted);
-}
-
-.birthdayLine strong{
-  color:var(--text);
-  font-weight:600;
-}
-
-.birthdayLine span{
-  white-space:nowrap;
 }
