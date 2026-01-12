@@ -275,15 +275,15 @@
   // ============================
   const modalState = { open: false, photos: [], idx: 0, title: "" };
   let modalKeyListenerBound = false;
+  let modalWired = false;
 
   function ensurePhotoModal() {
     if ($("photoModal")) {
-      // Wire only once (if index.html provides modal structure)
       wireExistingModalOnce();
       return;
     }
 
-    // If modal isn't in HTML, create it (fallback).
+    // Fallback create (if modal missing in HTML)
     const modal = document.createElement("div");
     modal.id = "photoModal";
     modal.className = "modal";
@@ -312,7 +312,6 @@
     wireExistingModalOnce();
   }
 
-  let modalWired = false;
   function wireExistingModalOnce() {
     if (modalWired) return;
 
@@ -332,16 +331,13 @@
     if (prevBtn) prevBtn.addEventListener("click", modalPrev);
     if (nextBtn) nextBtn.addEventListener("click", modalNext);
 
-    // Click outside dialog closes
     modal.addEventListener("click", (e) => {
       if (e.target === modal) closePhotoModal();
     });
     if (dialog) dialog.addEventListener("click", (e) => e.stopPropagation());
 
-    // Swipe support
     if (stage) wireModalSwipe(stage);
 
-    // Keyboard (bind once globally, act only if open)
     if (!modalKeyListenerBound) {
       modalKeyListenerBound = true;
       document.addEventListener("keydown", (e) => {
@@ -517,7 +513,6 @@
   // ============================
   async function loadAnnouncements() {
     try {
-      // Cache-bust safely without injecting JS into HTML.
       const url = "./announcements.json?v=" + Date.now();
       const res = await fetch(url, { cache: "no-store" });
 
@@ -536,10 +531,8 @@
         [];
 
       state.announcements = list;
-    } catch (err) {
+    } catch (_err) {
       state.announcements = [];
-      // Keep quiet by default; uncomment for debugging:
-      // console.warn("Announcements load failed:", err);
     }
   }
 
@@ -578,12 +571,34 @@
       if (!p || typeof p !== "object") continue;
 
       const text = String(p.text || p.message || "").trim();
-      if (!text) continue;
+      const headline = String(p.title || p.headline || "").trim();
+      const loc = String(p.location || "").trim();      // allow "???" / "TBD" (still shows)
+      const time = String(p.time || "").trim();         // optional
+      const pinned = !!p.pinned;
+
+      // Require at least one meaningful thing to show
+      if (!text && !headline && !loc && !time && !p.date) continue;
 
       const li = document.createElement("li");
       li.className = "annItem";
 
-      // Optional date
+      // Pinned badge (your CSS already supports .annPinned)
+      if (pinned) {
+        const pin = document.createElement("div");
+        pin.className = "annPinned";
+        pin.textContent = "Pinned";
+        li.appendChild(pin);
+      }
+
+      // Title / Headline (REQUESTED)
+      if (headline) {
+        const h = document.createElement("div");
+        h.className = "annHeadline";
+        h.textContent = headline;
+        li.appendChild(h);
+      }
+
+      // Optional date (only if valid ISO date)
       const when = parseISODate(p.date);
       if (when && !isNaN(when.getTime())) {
         const d = document.createElement("div");
@@ -592,19 +607,29 @@
         li.appendChild(d);
       }
 
-      // Optional location
-      const loc = String(p.location || "").trim();
+      // Optional time (raw string, because you want blank allowed)
+      if (time) {
+        const t = document.createElement("div");
+        t.className = "annLocation";
+        t.textContent = "Time: " + time;
+        li.appendChild(t);
+      }
+
+      // Location (REQUESTED: show label; allow ??? / TBD)
       if (loc) {
         const l = document.createElement("div");
         l.className = "annLocation";
-        l.textContent = "📍 " + loc;
+        l.textContent = "Location: " + loc;
         li.appendChild(l);
       }
 
-      const body = document.createElement("div");
-      body.className = "annText";
-      body.textContent = text;
-      li.appendChild(body);
+      // Body text
+      if (text) {
+        const body = document.createElement("div");
+        body.className = "annText";
+        body.textContent = text;
+        li.appendChild(body);
+      }
 
       ul.appendChild(li);
     }
@@ -707,7 +732,10 @@
         badgeText = "🎂 Birthday Today";
       }
 
-      const years = r._birth || r._passed ? (r._birth ? r._birth.getFullYear() : "—") + " – " + (r._passed ? r._passed.getFullYear() : "—") : "";
+      const years =
+        r._birth || r._passed
+          ? (r._birth ? r._birth.getFullYear() : "—") + " – " + (r._passed ? r._passed.getFullYear() : "—")
+          : "";
 
       const photos = Array.isArray(r._photos) ? r._photos : [];
 
@@ -806,7 +834,11 @@
       const row2 = document.createElement("div");
       row2.className = "row";
       row2.innerHTML =
-        "<span>" + (isMemorial ? "Age at passing" : "Current age") + "</span><span class='value'>" + escapeHtml(r.ageText) + "</span>";
+        "<span>" +
+        (isMemorial ? "Age at passing" : "Current age") +
+        "</span><span class='value'>" +
+        escapeHtml(r.ageText) +
+        "</span>";
       card.appendChild(row2);
 
       const row3 = document.createElement("div");
@@ -816,9 +848,12 @@
 
       // Contact (optional)
       const phoneLink =
-        r._phoneDisplay && r._phoneHref ? "<a class='contactLink' href='" + escapeHtml(r._phoneHref) + "'>" + escapeHtml(r._phoneDisplay) + "</a>" : "";
-      const emailLink =
-        r._email ? "<a class='contactLink' href='mailto:" + encodeURIComponent(r._email) + "'>" + escapeHtml(r._email) + "</a>" : "";
+        r._phoneDisplay && r._phoneHref
+          ? "<a class='contactLink' href='" + escapeHtml(r._phoneHref) + "'>" + escapeHtml(r._phoneDisplay) + "</a>"
+          : "";
+      const emailLink = r._email
+        ? "<a class='contactLink' href='mailto:" + encodeURIComponent(r._email) + "'>" + escapeHtml(r._email) + "</a>"
+        : "";
 
       if (phoneLink || emailLink) {
         const rowC = document.createElement("div");
@@ -898,7 +933,6 @@
     render();
   }
 
-  // Ensure DOM is ready (safe even if script is not deferred)
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
