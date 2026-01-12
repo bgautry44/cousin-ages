@@ -234,6 +234,6 @@
   </script>
 
   <!-- IMPORTANT: bump this value whenever you change app.js to avoid cached old code -->
-  <script src="app.js?v=20260111_clean1"></script>
+  <script src="./app.js?v=20260111_clean1"></script>
 </body>
 </html>
