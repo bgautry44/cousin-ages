@@ -51,6 +51,8 @@
 
   <main class="container">
     <div id="announcements"></div>
+  const url = `./announcements.json?v=${Date.now()}`;
+
 
     <div id="cards" class="cards"></div>
     <p id="empty" class="empty" hidden>No matches.</p>
