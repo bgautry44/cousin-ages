@@ -11,6 +11,8 @@
 
 *{ box-sizing:border-box; }
 
+html, body{ height:100%; }
+
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
@@ -25,6 +27,9 @@ img{ max-width:100%; height:auto; display:block; }
   margin:0 auto;
 }
 
+/* =========================================
+   Header
+========================================= */
 .app-header{
   border-bottom:1px solid var(--border);
   background:rgba(10,14,20,.7);
@@ -65,7 +70,7 @@ h1{
   display:flex;
   align-items:flex-start;
   justify-content:flex-end;
-  padding-top: 14px;
+  padding-top:14px;
 }
 
 .crestImg{
@@ -86,7 +91,9 @@ h1{
   .crestImg{ width:48px; height:48px; border-radius:12px; }
 }
 
-/* Controls */
+/* =========================================
+   Controls
+========================================= */
 .controls{
   display:flex;
   align-items:center;
@@ -131,13 +138,8 @@ label.toggle{
   flex:0 0 auto;
 }
 
-label.toggle input[type="checkbox"]{
-  margin:0;
-}
-
-label.toggle span{
-  margin:0;
-}
+label.toggle input[type="checkbox"]{ margin:0; }
+label.toggle span{ margin:0; }
 
 /* Meta line */
 .meta{
@@ -158,74 +160,68 @@ label.toggle span{
 .birthdayLine strong{ color:var(--text); font-weight:600; }
 .birthdayLine span{ white-space:nowrap; }
 
-/* Announcements */
+/* =========================================
+   Announcements
+========================================= */
+#announcements:empty{ display:none; }
+
 .annPanel{
-  margin: 12px 0 14px;
-  padding: 12px 12px;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  margin:12px 0 14px;
+  padding:12px;
+  border-radius:12px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
 }
 
 .annTitle{
-  font-weight: 700;
-  margin-bottom: 8px;
+  font-weight:700;
+  margin-bottom:8px;
 }
 
 .annList{
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 10px;
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:10px;
 }
 
 .annItem{
-  padding: 10px 10px;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.18);
-  border: 1px solid rgba(255,255,255,0.06);
-  position: relative;
+  padding:10px;
+  border-radius:10px;
+  background:rgba(0,0,0,0.18);
+  border:1px solid rgba(255,255,255,0.06);
+  position:relative;
 }
 
 .annHeadline{
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-weight:700;
+  margin-bottom:4px;
 }
 
 .annDate{
-  font-size: 0.85rem;
-  opacity: 0.75;
-  margin-bottom: 4px;
+  font-size:0.85rem;
+  opacity:0.75;
+  margin-bottom:4px;
 }
 
 .annLocation{
-  margin-bottom: 6px;
-  font-size: 0.90rem;
-  opacity: 0.85;
+  margin-bottom:6px;
+  font-size:0.90rem;
+  opacity:0.85;
 }
 
 .annText{
-  font-size: 0.95rem;
-  line-height: 1.3;
+  font-size:0.95rem;
+  line-height:1.35;
 }
 
-.annPinned{
-  position:absolute;
-  top:10px;
-  right:10px;
-  font-size:12px;
-  padding:4px 8px;
-  border-radius:999px;
-  border:1px solid rgba(255,122,26,0.35);
-  color: rgba(255,122,26,0.95);
-  background: rgba(255,122,26,0.08);
-}
-
-/* Cards grid */
+/* =========================================
+   Cards grid + card layout
+========================================= */
 .cards{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap:12px;
   padding:14px 0 18px;
 }
@@ -239,22 +235,24 @@ label.toggle span{
 }
 
 .cardTop{
-  display:flex;
+  display:grid;
+  grid-template-columns: 72px 1fr; /* space for 72px avatar */
   gap:12px;
-  align-items:flex-start;
+  align-items:start;
   margin:0 0 10px;
 }
 
+/* Avatar block */
 .avatarWrap{
   position:relative;
-  width:56px;
-  height:56px;
+  width:72px;
+  height:72px;
   flex:0 0 auto;
 }
 
 .avatar{
-  width:56px !important;
-  height:56px !important;
+  width:72px !important;
+  height:72px !important;
   border-radius:999px !important;
   object-fit:cover !important;
   border:1px solid rgba(255,255,255,0.14);
@@ -275,8 +273,8 @@ label.toggle span{
   position:absolute;
   right:-2px;
   bottom:-2px;
-  width:14px;
-  height:14px;
+  width:16px;
+  height:16px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,0.16);
   background: rgba(10,14,20,.95);
@@ -288,15 +286,18 @@ label.toggle span{
 }
 
 .cardTopText{
-  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
   min-width:0;
 }
 
+/* Name across top, clean and readable */
 .name{
-  font-weight:700;
-  margin:0 0 6px;
+  font-weight:800;
+  margin:0;
   font-size:16px;
-  line-height:1.2;
+  line-height:1.25;
 }
 
 /* Badge */
@@ -309,54 +310,15 @@ label.toggle span{
   border-radius:999px;
   border:1px solid var(--border);
   color:var(--muted);
+  width:max-content;
 }
 
 .badge.alive{ border-color:rgba(56,211,159,.35); color:rgba(56,211,159,.95); }
 .badge.deceased{ border-color:rgba(255,92,122,.35); color:rgba(255,92,122,.95); }
-.badge.birthday{ border-color: rgba(255,122,26,.6); color: rgba(255,122,26,1); font-weight:700; }
+.badge.birthday{ border-color: rgba(255,122,26,.6); color: rgba(255,122,26,1); font-weight:800; }
 
-/* Rows */
-.row{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  font-size:13px;
-  color:var(--muted);
-  margin:6px 0;
-}
-
-.value{
-  color:var(--text);
-  font-weight:600;
-  text-align:right;
-}
-
-.contactLink{
-  color: var(--text);
-  font-weight: 600;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(255,255,255,0.18);
-  padding-bottom: 1px;
-}
-
-.contactLink:hover{
-  border-bottom-color: rgba(255,255,255,0.35);
-}
-
-/* Memorial */
-.card.memorial{
-  border-color: rgba(255,122,26,.35);
-  box-shadow: 0 10px 24px rgba(0,0,0,.25);
-}
-
-.card.memorial .avatar{
-  filter: grayscale(0.55) contrast(1.05);
-}
-
+/* Memorial extras */
 .memorialMark{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
   font-size:12px;
   color: rgba(255,122,26,.95);
   margin-top:2px;
@@ -368,14 +330,59 @@ label.toggle span{
   margin-top:2px;
 }
 
+/* Rows (each field on its own row) */
+.row{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:12px;
+  font-size:13px;
+  color:var(--muted);
+  margin:8px 0;
+}
+
+.value{
+  color:var(--text);
+  font-weight:650;
+  text-align:right;
+}
+
+/* Contact links */
+.contactLink{
+  color: var(--text);
+  font-weight:650;
+  text-decoration:none;
+  border-bottom: 1px solid rgba(255,255,255,0.18);
+  padding-bottom:1px;
+}
+
+.contactLink:hover{ border-bottom-color: rgba(255,255,255,0.35); }
+
+.contactValue{
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+
+/* Memorial card treatment */
+.card.memorial{
+  border-color: rgba(255,122,26,.35);
+  box-shadow: 0 10px 24px rgba(0,0,0,.25);
+}
+
+.card.memorial .avatar{
+  filter: grayscale(0.55) contrast(1.05);
+}
+
+/* Tribute blocks */
 .tribute{
   margin-top:10px;
   font-size:13px;
   color: var(--text);
-  opacity: .92;
-  line-height: 1.35;
+  opacity:.92;
+  line-height:1.4;
   border-top: 1px solid rgba(255,255,255,0.08);
-  padding-top: 10px;
+  padding-top:10px;
 }
 
 .wouldHaveTurned{
@@ -386,24 +393,28 @@ label.toggle span{
   padding-top:8px;
 }
 
-.wouldHaveTurned strong{ color: var(--text); font-weight: 600; }
+.wouldHaveTurned strong{ color: var(--text); font-weight:650; }
 
+/* Empty state */
 .empty{
   color:var(--muted);
   text-align:center;
   padding:28px 0;
 }
 
-/* Fade for carousel/modal */
-.fadeIn{
-  animation: fadeInQuick .22s ease-out;
-}
+/* =========================================
+   Fade for carousel/modal
+========================================= */
+.fadeIn{ animation: fadeInQuick .22s ease-out; }
+
 @keyframes fadeInQuick{
   from { opacity: .25; }
   to   { opacity: 1; }
 }
 
-/* Modal */
+/* =========================================
+   Modal
+========================================= */
 .modal[hidden]{ display:none; }
 
 .modal{
@@ -515,16 +526,22 @@ label.toggle span{
 
 .modal__nav:active{ transform: translateY(1px); }
 
+/* Responsive refinements */
 @media (max-width: 520px){
+  .cards{ grid-template-columns: 1fr; }
+  .cardTop{ grid-template-columns: 72px 1fr; }
+
   .modal__dialog{
     width: 96vw;
     margin: 2vh auto;
     max-height: 94vh;
   }
+
   .modal__body{
     grid-template-columns: 40px 1fr 40px;
     padding:10px;
   }
+
   .modal__stage{
     height: calc(94vh - 120px);
     min-height: 300px;
