@@ -281,7 +281,7 @@
     modal.id = "photoModal";
     modal.className = "modal";
     modal.hidden = true;
-    modal.setAttribute("aria-hidden", "true");
+    modal.setAttribute("inert", "");
 
     modal.innerHTML = `
       <div class="modal__backdrop"></div>
@@ -351,7 +351,7 @@
     if (titleEl) titleEl.textContent = modalState.title;
 
     modal.hidden = false;
-    modal.setAttribute("aria-hidden", "false");
+    modal.removeAttribute("inert");
     document.body.style.overflow = "hidden";
 
     renderModalPhoto();
