@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>My Crazy Cousins</title>
   <meta name="apple-mobile-web-app-title" content="My Crazy Cousins" />
+
   <link rel="stylesheet" href="./styles.css" />
 
-  <!-- Home screen / tab icons -->
-  <link rel="apple-touch-icon" href="icon.png" />
-  <link rel="icon" href="icon.png" />
+  <!-- Home screen / tab icons (relative paths for GitHub Pages) -->
+  <link rel="apple-touch-icon" href="./icon.png" />
+  <link rel="icon" href="./icon.png" />
 </head>
 
 <body>
@@ -22,7 +23,13 @@
 
       <!-- Family crest (top-right) -->
       <div class="headerCrest" aria-hidden="true">
-        <img class="crestImg" src="assets/family-crest3.png" alt="Our Family" loading="eager" />
+        <img
+          class="crestImg"
+          src="./assets/family-crest3.png"
+          alt="Our Family"
+          loading="eager"
+          decoding="async"
+        />
       </div>
     </div>
 
@@ -50,7 +57,8 @@
   </header>
 
   <main class="container">
-    <div id="announcements"></div>
+    <!-- Announcements must be loaded from ./announcements.json by app.js -->
+    <div id="announcements" aria-live="polite"></div>
 
     <div id="cards" class="cards"></div>
     <p id="empty" class="empty" hidden>No matches.</p>
@@ -87,6 +95,7 @@
 
   <script>
     // Embedded default dataset (from your Excel file)
+    // app.js should read from window.COUSIN_DATA as its data source.
     window.COUSIN_DATA = [
       {
         "name": "Mary Ann Hicks",
@@ -234,6 +243,6 @@
   </script>
 
   <!-- IMPORTANT: bump this value whenever you change app.js to avoid cached old code -->
-  <script src="./app.js?v=20260111_clean1"></script>
+  <script src="./app.js?v=20260111_clean1" defer></script>
 </body>
 </html>
