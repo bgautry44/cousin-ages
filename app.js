@@ -14,6 +14,28 @@
     q: ""
   };
 
+    async function loadAnnouncementsOnce() {
+  // If announcements were embedded in index.html, you can still support fallback:
+  if (Array.isArray(window.ANNOUNCEMENTS) && window.ANNOUNCEMENTS.length) {
+    state.announcements = window.ANNOUNCEMENTS;
+    return;
+  }
+
+  try {
+    // Cache-bust so GitHub Pages updates show quickly
+    const url = `announcements.json?v=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const json = await res.json();
+    state.announcements = Array.isArray(json) ? json : [];
+  } catch (e) {
+    console.warn("Announcements load failed:", e?.message || e);
+    state.announcements = [];
+  }
+}
+
   // ============================
   // Date helpers (LOCAL dates)
   // ============================
