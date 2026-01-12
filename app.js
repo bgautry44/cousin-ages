@@ -938,6 +938,8 @@ function makeAnnouncementsBlock(posts) {
   }
 
   // Bootstrap
+  (async function start() {
   hookUI();
+  await loadAnnouncementsOnce();
   render();
 })();
