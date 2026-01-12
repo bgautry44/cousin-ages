@@ -1,12 +1,15 @@
 [
   {
-    "text": "Never too early to be thinking about the next Cousins Reunion.",
+    "title": "Cousins Reunion",
     "date": "",
+    "time": "",
     "location": "???",
+    "text": "Never too early to start planning...",
     "pinned": true
   },
   {
-    "text": "Please send any updates or ideas to Barry.",
-    "pinned": false
+    "title": "Photos Needed",
+    "date": "",
+    "text": "We still need photos of Barbara, Kathy, Mary Ann, Steve."
   }
 ]
