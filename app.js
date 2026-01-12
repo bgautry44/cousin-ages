@@ -25,12 +25,10 @@
   function parseISODate(v) {
     if (v == null || v === "") return null;
 
-    // Already Date
     if (Object.prototype.toString.call(v) === "[object Date]" && !isNaN(v.getTime())) {
       return new Date(v.getFullYear(), v.getMonth(), v.getDate());
     }
 
-    // String
     if (typeof v === "string") {
       const s = v.trim();
       const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -90,6 +88,11 @@
     return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
 
+  function fmtLongDate(d) {
+    if (!d) return "—";
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  }
+
   // ============================
   // Text helpers
   // ============================
@@ -127,8 +130,6 @@
   }
 
   // Photos:
-  // - prefer r.photos (array)
-  // - else fall back to r.photo (single string)
   function photoList(r) {
     const out = [];
 
@@ -283,7 +284,6 @@
       return;
     }
 
-    // Fallback create (if modal missing in HTML)
     const modal = document.createElement("div");
     modal.id = "photoModal";
     modal.className = "modal";
@@ -515,15 +515,10 @@
     try {
       const url = "./announcements.json?v=" + Date.now();
       const res = await fetch(url, { cache: "no-store" });
-
       if (!res.ok) throw new Error("HTTP " + res.status);
 
       const json = await res.json();
 
-      // Accept either:
-      // 1) { announcements: [...] }
-      // 2) [...] (array)
-      // 3) { items: [...] }
       const list =
         (json && Array.isArray(json.announcements) && json.announcements) ||
         (Array.isArray(json) && json) ||
@@ -570,19 +565,18 @@
       const p = list[i];
       if (!p || typeof p !== "object") continue;
 
-      const text = String(p.text || p.message || "").trim();
       const headline = String(p.title || p.headline || "").trim();
-      const loc = String(p.location || "").trim();      // allow "???" / "TBD" (still shows)
-      const time = String(p.time || "").trim();         // optional
+      const text = String(p.text || p.message || "").trim();
+      const locRaw = (p.location == null) ? "" : String(p.location);
+      const loc = String(locRaw).trim(); // keep ??? / TBD
       const pinned = !!p.pinned;
 
-      // Require at least one meaningful thing to show
-      if (!text && !headline && !loc && !time && !p.date) continue;
+      // Always show Date/Location labels, but don't render completely empty items
+      if (!headline && !text && !p.date && locRaw == null) continue;
 
       const li = document.createElement("li");
       li.className = "annItem";
 
-      // Pinned badge (your CSS already supports .annPinned)
       if (pinned) {
         const pin = document.createElement("div");
         pin.className = "annPinned";
@@ -590,7 +584,7 @@
         li.appendChild(pin);
       }
 
-      // Title / Headline (REQUESTED)
+      // Title (REQUESTED)
       if (headline) {
         const h = document.createElement("div");
         h.className = "annHeadline";
@@ -598,30 +592,18 @@
         li.appendChild(h);
       }
 
-      // Optional date (only if valid ISO date)
+      // Date label ALWAYS (even if blank)
       const when = parseISODate(p.date);
-      if (when && !isNaN(when.getTime())) {
-        const d = document.createElement("div");
-        d.className = "annDate";
-        d.textContent = when.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-        li.appendChild(d);
-      }
+      const dateLine = document.createElement("div");
+      dateLine.className = "annDate";
+      dateLine.textContent = "Date: " + (when ? fmtLongDate(when) : "—");
+      li.appendChild(dateLine);
 
-      // Optional time (raw string, because you want blank allowed)
-      if (time) {
-        const t = document.createElement("div");
-        t.className = "annLocation";
-        t.textContent = "Time: " + time;
-        li.appendChild(t);
-      }
-
-      // Location (REQUESTED: show label; allow ??? / TBD)
-      if (loc) {
-        const l = document.createElement("div");
-        l.className = "annLocation";
-        l.textContent = "Location: " + loc;
-        li.appendChild(l);
-      }
+      // Location label ALWAYS (even if blank)
+      const locLine = document.createElement("div");
+      locLine.className = "annLocation";
+      locLine.textContent = "Location: " + (loc ? loc : "—");
+      li.appendChild(locLine);
 
       // Body text
       if (text) {
@@ -655,7 +637,6 @@
       return;
     }
 
-    // Stop carousels before rebuild
     for (const [imgEl] of carouselTimers) stopCarouselFor(imgEl);
 
     const computed = (state.data || []).map(computeRow);
@@ -673,7 +654,6 @@
 
     count.textContent = "Shown: " + filtered.length + " / " + computed.length;
 
-    // Upcoming birthdays (next 30 days)
     if (birthdayLine) {
       const soon = computed
         .filter((r) => r.status === "alive" && r._birth && r.nextBirthday)
@@ -703,7 +683,6 @@
       }
     }
 
-    // Announcements
     const annHost = upsertAnnouncementsHost();
     annHost.innerHTML = "";
     const annBlock = makeAnnouncementsBlock(state.announcements);
@@ -742,7 +721,6 @@
       const card = document.createElement("section");
       card.className = "card" + (isMemorial ? " memorial" : "") + (isBirthday ? " birthdayToday" : "");
 
-      // Top row
       const top = document.createElement("div");
       top.className = "cardTop";
 
@@ -784,7 +762,6 @@
         }
       }
 
-      // Avatar click => full-screen modal
       avatarWrap.style.cursor = photos.length ? "pointer" : "default";
       avatarWrap.addEventListener("click", (e) => {
         if (!photos.length) return;
@@ -825,7 +802,6 @@
       top.appendChild(topText);
       card.appendChild(top);
 
-      // Rows
       const row1 = document.createElement("div");
       row1.className = "row";
       row1.innerHTML = "<span>Birthdate</span><span class='value'>" + fmtDate(r._birth) + "</span>";
@@ -846,7 +822,6 @@
       row3.innerHTML = "<span>Passed</span><span class='value'>" + fmtDate(r._passed) + "</span>";
       card.appendChild(row3);
 
-      // Contact (optional)
       const phoneLink =
         r._phoneDisplay && r._phoneHref
           ? "<a class='contactLink' href='" + escapeHtml(r._phoneHref) + "'>" + escapeHtml(r._phoneDisplay) + "</a>"
@@ -859,11 +834,12 @@
         const rowC = document.createElement("div");
         rowC.className = "row";
         rowC.innerHTML =
-          "<span>Contact</span><span class='value contactValue'>" + [phoneLink, emailLink].filter(Boolean).join(" · ") + "</span>";
+          "<span>Contact</span><span class='value contactValue'>" +
+          [phoneLink, emailLink].filter(Boolean).join(" · ") +
+          "</span>";
         card.appendChild(rowC);
       }
 
-      // Tribute + would-have-turned
       if (isMemorial && r.tribute && String(r.tribute).trim()) {
         const tribute = document.createElement("div");
         tribute.className = "tribute";
